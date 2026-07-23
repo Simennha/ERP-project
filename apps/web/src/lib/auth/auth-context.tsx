@@ -6,13 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { AuthUser } from '@erp/contracts';
 import { hasPermission as checkHasPermission } from '@erp/auth';
 import { apiLogin, apiLogout, apiMe, apiRefresh } from './api-client';
+import { getStoredAccessToken, setStoredAccessToken } from './token-store';
 
 /**
  * Client-side auth state.
@@ -20,8 +20,12 @@ import { apiLogin, apiLogout, apiMe, apiRefresh } from './api-client';
  * Design note: the framework-agnostic permission math lives in @erp/auth
  * (shared with the NestJS guard). Only the React session wiring lives here,
  * in the web app, because it is app-specific (cookie bootstrap, in-memory
- * access token). The access token is kept in a ref (memory) — never in
- * localStorage — and re-obtained on load via the httpOnly refresh cookie.
+ * access token). The access token is kept in `token-store.ts`'s module-level
+ * variable (memory only, never localStorage) rather than a React ref — that
+ * lets `authedFetch` (api-client.ts) read and, after a 401-triggered silent
+ * refresh, update the SAME value this provider reads, so a token refreshed
+ * mid-request is immediately visible to every subsequent call, not just the
+ * one that happened to trigger the refresh.
  */
 interface AuthContextValue {
   user: AuthUser | null;
@@ -49,16 +53,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const accessTokenRef = useRef<string | null>(null);
 
   const clearSession = useCallback(() => {
-    accessTokenRef.current = null;
+    setStoredAccessToken(null);
     setUser(null);
     setPermissions([]);
   }, []);
 
   const loadSession = useCallback(async (accessToken: string) => {
-    accessTokenRef.current = accessToken;
+    setStoredAccessToken(accessToken);
     const me = await apiMe(accessToken);
     setUser(me.user);
     setPermissions(me.permissions);
@@ -105,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [permissions],
   );
 
-  const getAccessToken = useCallback(() => accessTokenRef.current, []);
+  const getAccessToken = useCallback(() => getStoredAccessToken(), []);
 
   const value = useMemo<AuthContextValue>(
     () => ({

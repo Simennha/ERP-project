@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, Input, Label, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listProducts, type Paginated, type ProductDto } from '@/lib/inventory/api';
 
 const PAGE_SIZE = 25;
 
-export default function ProductsPage() {
+function ProductsContent() {
   const { getAccessToken, hasPermission } = useAuth();
   const canCreate = hasPermission(PERMISSIONS.INVENTORY_PRODUCT_CREATE);
 
@@ -187,5 +188,13 @@ export default function ProductsPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.INVENTORY_PRODUCT_READ}>
+      <ProductsContent />
+    </RequirePermissionPage>
   );
 }

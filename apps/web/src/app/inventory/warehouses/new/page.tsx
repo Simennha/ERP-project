@@ -1,28 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { createWarehouse } from '@/lib/inventory/api';
 import { WarehouseForm } from '../warehouse-form';
 
-export default function NewWarehousePage() {
+function NewWarehouseContent() {
   const router = useRouter();
-  const { getAccessToken, hasPermission } = useAuth();
-  const canManage = hasPermission(PERMISSIONS.INVENTORY_WAREHOUSE_MANAGE);
-
-  useEffect(() => {
-    if (!canManage) {
-      router.replace('/inventory/warehouses');
-    }
-  }, [canManage, router]);
-
-  if (!canManage) {
-    return null;
-  }
+  const { getAccessToken } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -43,5 +32,13 @@ export default function NewWarehousePage() {
         Cancel
       </Link>
     </div>
+  );
+}
+
+export default function NewWarehousePage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.INVENTORY_WAREHOUSE_MANAGE}>
+      <NewWarehouseContent />
+    </RequirePermissionPage>
   );
 }

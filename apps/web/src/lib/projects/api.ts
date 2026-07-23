@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/lib/auth/api-client';
+import { authedFetch } from '@/lib/auth/api-client';
 
 /**
  * Typed client for the Projects REST API.
@@ -53,49 +53,8 @@ export interface ProjectInput {
 
 // --- Fetch plumbing ----------------------------------------------------------
 
-async function extractErrorMessage(res: Response): Promise<string> {
-  try {
-    const body: unknown = await res.json();
-    if (body && typeof body === 'object' && 'message' in body) {
-      const message = (body as { message: unknown }).message;
-      if (typeof message === 'string') {
-        return message;
-      }
-      if (Array.isArray(message)) {
-        return message.join(', ');
-      }
-    }
-  } catch {
-    // Non-JSON error body — fall through to the status text.
-  }
-  return `Request failed (${res.status})`;
-}
-
-async function authedFetch<T>(
-  token: string | null,
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    throw new Error(await extractErrorMessage(res));
-  }
-  if (res.status === 204) {
-    return undefined as T;
-  }
-  return (await res.json()) as T;
-}
+// authedFetch is shared (lib/auth/api-client.ts) — handles the fetch pattern
+// below plus a silent 401 -> refresh -> retry recovery.
 
 function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
   const search = new URLSearchParams();

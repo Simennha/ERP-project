@@ -103,7 +103,21 @@ export class WorkflowEngineService {
         results.push(await this.runAction(action, event));
       }
 
-      await this.recordRun(definition.id, event.name, 'matched', results, null);
+      // Each action's own failure is caught in runAction() (so one bad action
+      // doesn't stop the rest from running) and recorded per-action in
+      // `results` — but that means the overall run status must be derived
+      // from those results, not hardcoded to 'matched', or a run where every
+      // action failed would still misleadingly report 'matched' with no
+      // visible error (exactly what WorkflowRun's own schema docblock says
+      // 'error' is for: "an action threw").
+      const failed = results.filter((r) => r.status === 'error');
+      const status = failed.length > 0 ? 'error' : 'matched';
+      const summary =
+        failed.length > 0
+          ? failed.map((r) => `${r.type}: ${r.error}`).join('; ')
+          : null;
+
+      await this.recordRun(definition.id, event.name, status, results, summary);
     } catch (err) {
       // Unexpected failure of the run itself (e.g. a DB error) — distinct from
       // an individual action throwing, which is captured per-action above.

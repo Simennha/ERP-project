@@ -1,4 +1,5 @@
 import type { LoginResponse, MeResponse, RefreshResponse } from '@erp/contracts';
+import { setStoredAccessToken } from './token-store';
 
 /**
  * Base URL the browser uses to reach the NestJS API. Override with
@@ -73,4 +74,56 @@ export async function apiLogout(): Promise<void> {
     method: 'POST',
     credentials: 'include',
   });
+}
+
+/**
+ * Shared authenticated-fetch helper for every feature module's API client
+ * (lib/inventory/api.ts, lib/sales/api-client.ts, lib/finance/api.ts, ...).
+ *
+ * The access token expires after 15 minutes (JWT_ACCESS_EXPIRES_IN). Before
+ * this helper existed, every module's own copy of this function had no
+ * recovery path for that: any session left open past 15 minutes turned
+ * every subsequent list load / form submit into a raw "Request failed
+ * (401)" error, even though `AuthContext.reload()` existed specifically to
+ * recover from this (its docblock said so) — nothing ever called it. Here,
+ * a 401 triggers exactly one silent `apiRefresh()` + retry with the new
+ * token (also writing it to the shared token store so later calls use it
+ * too) before giving up and surfacing the error.
+ */
+export async function authedFetch<T>(
+  token: string | null,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const doFetch = (bearer: string): Promise<Response> =>
+    fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${bearer}`,
+        ...(init?.headers ?? {}),
+      },
+    });
+
+  let res = await doFetch(token);
+  if (res.status === 401) {
+    const refreshed = await apiRefresh();
+    if (refreshed?.accessToken) {
+      setStoredAccessToken(refreshed.accessToken);
+      res = await doFetch(refreshed.accessToken);
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error(await extractErrorMessage(res));
+  }
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  return (await res.json()) as T;
 }

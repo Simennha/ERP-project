@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { deleteEmployee, getEmployee, updateEmployee, type EmployeeDto } from '@/lib/hr/api';
 import { EmployeeForm, type EmployeeFormValues } from '../employee-form';
 
@@ -27,7 +28,7 @@ function toFormValues(employee: EmployeeDto): EmployeeFormValues {
   };
 }
 
-export default function EmployeeDetailPage() {
+function EmployeeDetailContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -152,5 +153,13 @@ function Detail({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}: </span>
       {value}
     </p>
+  );
+}
+
+export default function EmployeeDetailPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.HR_EMPLOYEE_READ}>
+      <EmployeeDetailContent />
+    </RequirePermissionPage>
   );
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, Label, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
   listEmployees,
   type EmployeeDto,
@@ -31,7 +32,7 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={className}>{label}</span>;
 }
 
-export default function EmployeesPage() {
+function EmployeesContent() {
   const { getAccessToken, hasPermission } = useAuth();
   const canCreate = hasPermission(PERMISSIONS.HR_EMPLOYEE_CREATE);
 
@@ -188,5 +189,13 @@ export default function EmployeesPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function EmployeesPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.HR_EMPLOYEE_READ}>
+      <EmployeesContent />
+    </RequirePermissionPage>
   );
 }

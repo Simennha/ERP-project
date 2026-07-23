@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listProjects, type Paginated, type ProjectDto } from '@/lib/projects/api';
 
 const PAGE_SIZE = 25;
@@ -30,7 +31,7 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleDateString();
 }
 
-export default function ProjectsPage() {
+function ProjectsContent() {
   const { getAccessToken, hasPermission } = useAuth();
   const canCreate = hasPermission(PERMISSIONS.PROJECTS_PROJECT_CREATE);
 
@@ -145,5 +146,13 @@ export default function ProjectsPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.PROJECTS_PROJECT_READ}>
+      <ProjectsContent />
+    </RequirePermissionPage>
   );
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ClsModule } from 'nestjs-cls';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -38,6 +39,12 @@ import { ReportingModule } from './reporting/reporting.module';
     // Global EventEmitter2 instance backing the event bus (core/event-bus).
     // Wildcard mode is required for RealtimeGateway's `@OnEvent('**')` catch-all.
     EventEmitterModule.forRoot({ wildcard: true, delimiter: '.' }),
+    // App-wide default rate limit (200 req/min per IP) — a generous general
+    // abuse backstop. `/auth/login` overrides this with a much stricter limit
+    // via `@Throttle(...)` (see auth.controller.ts) since it's the one
+    // endpoint worth protecting from credential-stuffing/brute-force
+    // specifically.
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 200 }]),
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -56,8 +63,10 @@ import { ReportingModule } from './reporting/reporting.module';
   ],
   controllers: [AppController],
   providers: [
-    // Global guards. Registration order is significant: authenticate first
-    // (JwtAuthGuard), then authorize (PermissionsGuard).
+    // Global guards. Registration order is significant: rate-limit first
+    // (ThrottlerGuard — cheapest check, fail fast before touching auth),
+    // then authenticate (JwtAuthGuard), then authorize (PermissionsGuard).
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],

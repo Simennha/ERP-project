@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { deleteProject, getProject, updateProject, type ProjectDto } from '@/lib/projects/api';
 import { ProjectForm, type ProjectFormValues } from '../project-form';
 
@@ -34,7 +35,7 @@ function toFormValues(project: ProjectDto): ProjectFormValues {
   };
 }
 
-export default function ProjectDetailPage() {
+function ProjectDetailContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -165,5 +166,13 @@ function Detail({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}: </span>
       {value}
     </p>
+  );
+}
+
+export default function ProjectDetailPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.PROJECTS_PROJECT_READ}>
+      <ProjectDetailContent />
+    </RequirePermissionPage>
   );
 }

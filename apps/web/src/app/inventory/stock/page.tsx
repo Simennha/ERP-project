@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { useDomainEvents } from '@/lib/realtime/use-domain-events';
 import { useTableFilters } from '@/lib/hooks/use-table-filters';
 import {
@@ -286,8 +287,10 @@ function StockContent() {
 
 export default function StockPage() {
   return (
-    <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-      <StockContent />
-    </Suspense>
+    <RequirePermissionPage permission={PERMISSIONS.INVENTORY_PRODUCT_READ}>
+      <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
+        <StockContent />
+      </Suspense>
+    </RequirePermissionPage>
   );
 }

@@ -73,9 +73,26 @@ export class NotificationService {
    * and MUST NOT be able to fail the request (a broadcaster error only means
    * the user misses the *live* toast — they still see the notification on next
    * fetch). Hence the try/catch around the broadcast.
+   *
+   * `listForUser`/`markRead` scope purely by `userId` (safe only because a
+   * `userId` belongs to exactly one company) — that invariant is enforced
+   * HERE, the one write path, rather than re-checked on every read. Every
+   * caller (the workflow `notify`/`assignTask` handlers included) supplies
+   * both `companyId` and `userId`, but neither is guaranteed to agree without
+   * this check — without it, a misconfigured or malicious workflow config
+   * could deliver one company's notification content to another company's
+   * user.
    */
   async send(input: NotificationInput): Promise<NotificationDto> {
     const data = notificationInputSchema.parse(input);
+
+    const recipient = await this.prisma.user.findFirst({
+      where: { id: data.userId, companyId: data.companyId },
+      select: { id: true },
+    });
+    if (!recipient) {
+      throw new NotFoundException(`User ${data.userId} not found in company ${data.companyId}`);
+    }
 
     const created = await this.prisma.notification.create({
       data: {

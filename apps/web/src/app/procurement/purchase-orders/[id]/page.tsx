@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
   deletePurchaseOrder,
   getPurchaseOrder,
@@ -31,7 +32,7 @@ function toFormValues(purchaseOrder: PurchaseOrderDto): PurchaseOrderFormValues 
   };
 }
 
-export default function PurchaseOrderDetailPage() {
+function PurchaseOrderDetailContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -165,5 +166,13 @@ function Detail({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}: </span>
       {value}
     </p>
+  );
+}
+
+export default function PurchaseOrderDetailPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_READ}>
+      <PurchaseOrderDetailContent />
+    </RequirePermissionPage>
   );
 }

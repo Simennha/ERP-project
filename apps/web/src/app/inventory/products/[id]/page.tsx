@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { deleteProduct, getProduct, updateProduct, type ProductDto } from '@/lib/inventory/api';
 import { ProductForm, type ProductFormValues } from '../product-form';
 
@@ -22,7 +23,7 @@ function toFormValues(product: ProductDto): ProductFormValues {
   };
 }
 
-export default function ProductDetailPage() {
+function ProductDetailContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -155,5 +156,13 @@ function Detail({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}: </span>
       {value}
     </p>
+  );
+}
+
+export default function ProductDetailPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.INVENTORY_PRODUCT_READ}>
+      <ProductDetailContent />
+    </RequirePermissionPage>
   );
 }

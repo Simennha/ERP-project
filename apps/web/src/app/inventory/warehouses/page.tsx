@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listWarehouses, type Paginated, type WarehouseDto } from '@/lib/inventory/api';
 
 const PAGE_SIZE = 25;
 
-export default function WarehousesPage() {
+function WarehousesContent() {
   const { getAccessToken, hasPermission } = useAuth();
   const canManage = hasPermission(PERMISSIONS.INVENTORY_WAREHOUSE_MANAGE);
 
@@ -135,5 +136,13 @@ export default function WarehousesPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function WarehousesPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.INVENTORY_WAREHOUSE_MANAGE}>
+      <WarehousesContent />
+    </RequirePermissionPage>
   );
 }

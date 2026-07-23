@@ -3,8 +3,10 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
+import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
   getProduct,
   listMovements,
@@ -192,8 +194,10 @@ function MovementsContent() {
 
 export default function MovementsPage() {
   return (
-    <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-      <MovementsContent />
-    </Suspense>
+    <RequirePermissionPage permission={PERMISSIONS.INVENTORY_PRODUCT_READ}>
+      <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
+        <MovementsContent />
+      </Suspense>
+    </RequirePermissionPage>
   );
 }

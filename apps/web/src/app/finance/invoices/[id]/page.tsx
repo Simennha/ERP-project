@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, Card, CardContent, CardHeader, CardTitle, Label, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
   deleteInvoice,
   getInvoice,
@@ -15,7 +16,7 @@ import {
 
 const STATUS_OPTIONS = ['draft', 'sent', 'paid'] as const;
 
-export default function InvoiceDetailPage() {
+function InvoiceDetailContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -194,5 +195,13 @@ function Detail({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}: </span>
       {value}
     </p>
+  );
+}
+
+export default function InvoiceDetailPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.FINANCE_INVOICE_READ}>
+      <InvoiceDetailContent />
+    </RequirePermissionPage>
   );
 }

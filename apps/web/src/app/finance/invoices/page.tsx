@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listInvoices, type InvoiceDto, type Paginated } from '@/lib/finance/api';
 
 const PAGE_SIZE = 25;
@@ -24,7 +25,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function InvoicesPage() {
+function InvoicesContent() {
   const { getAccessToken, hasPermission } = useAuth();
   const canCreate = hasPermission(PERMISSIONS.FINANCE_INVOICE_CREATE);
 
@@ -137,5 +138,13 @@ export default function InvoicesPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function InvoicesPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.FINANCE_INVOICE_READ}>
+      <InvoicesContent />
+    </RequirePermissionPage>
   );
 }

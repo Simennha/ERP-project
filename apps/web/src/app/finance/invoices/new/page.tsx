@@ -6,16 +6,16 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, Label, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
   createInvoice,
   listAvailableSalesOrders,
   type AvailableSalesOrderDto,
 } from '@/lib/finance/api';
 
-export default function NewInvoicePage() {
+function NewInvoiceContent() {
   const router = useRouter();
-  const { getAccessToken, hasPermission } = useAuth();
-  const canCreate = hasPermission(PERMISSIONS.FINANCE_INVOICE_CREATE);
+  const { getAccessToken } = useAuth();
 
   const [orders, setOrders] = useState<AvailableSalesOrderDto[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -37,22 +37,9 @@ export default function NewInvoicePage() {
     }
   }, [getAccessToken]);
 
-  // Bounce out if the user lacks create permission (the API would 403 anyway).
   useEffect(() => {
-    if (!canCreate) {
-      router.replace('/finance/invoices');
-    }
-  }, [canCreate, router]);
-
-  useEffect(() => {
-    if (canCreate) {
-      void load();
-    }
-  }, [canCreate, load]);
-
-  if (!canCreate) {
-    return null;
-  }
+    void load();
+  }, [load]);
 
   async function handleSubmit() {
     if (!selectedOrderId) {
@@ -123,5 +110,13 @@ export default function NewInvoicePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewInvoicePage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.FINANCE_INVOICE_CREATE}>
+      <NewInvoiceContent />
+    </RequirePermissionPage>
   );
 }

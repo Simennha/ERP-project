@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listPurchaseOrders, type Paginated, type PurchaseOrderDto } from '@/lib/procurement/api';
 
 const PAGE_SIZE = 25;
@@ -16,7 +17,7 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: 'text-destructive',
 };
 
-export default function PurchaseOrdersPage() {
+function PurchaseOrdersContent() {
   const { getAccessToken, hasPermission } = useAuth();
   const canCreate = hasPermission(PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_CREATE);
 
@@ -129,5 +130,13 @@ export default function PurchaseOrdersPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function PurchaseOrdersPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_READ}>
+      <PurchaseOrdersContent />
+    </RequirePermissionPage>
   );
 }

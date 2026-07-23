@@ -1,4 +1,5 @@
-import { API_BASE_URL } from '../auth/api-client';
+import { API_BASE_URL, apiRefresh } from '../auth/api-client';
+import { setStoredAccessToken } from '../auth/token-store';
 
 /**
  * Sales feature API client. Mirrors the functional style of lib/auth/api-client
@@ -127,20 +128,38 @@ async function extractErrorMessage(res: Response): Promise<string> {
   return `Request failed (${res.status})`;
 }
 
+/**
+ * On a 401, attempts exactly one silent `apiRefresh()` + retry with the new
+ * token (also updating the shared token store so later calls use it too)
+ * before giving up — see lib/auth/api-client.ts's `authedFetch` docblock for
+ * why (the access token expires after 15 minutes; without this, any session
+ * left open past that turns every subsequent call into a raw 401 error).
+ */
 async function salesFetch<T>(
   path: string,
   token: string | null,
   init?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
+  const doFetch = (bearer: string | null): Promise<Response> =>
+    fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+
+  let res = await doFetch(token);
+  if (res.status === 401) {
+    const refreshed = await apiRefresh();
+    if (refreshed?.accessToken) {
+      setStoredAccessToken(refreshed.accessToken);
+      res = await doFetch(refreshed.accessToken);
+    }
+  }
+
   if (!res.ok) {
     throw new Error(await extractErrorMessage(res));
   }

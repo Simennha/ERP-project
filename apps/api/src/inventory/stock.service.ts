@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EVENTS } from '@erp/contracts';
+import { Prisma } from '@erp/database';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventBusService } from '../core/event-bus/event-bus.service';
 import { InsufficientStockError, InvalidReservationError } from './stock-errors';
@@ -46,6 +47,16 @@ export interface AvailableQuantity {
  * `quantityOnHand` is the physical count; `quantityReserved` is stock already
  * committed to open orders. `available = quantityOnHand - quantityReserved`
  * is always computed, never stored.
+ *
+ * Concurrency: every mutator's initial read (`lockStockItemForUpdate`) is a
+ * `SELECT ... FOR UPDATE` row lock, not a plain `findFirst`. Without it, two
+ * concurrent calls against the same StockItem (e.g. two customers confirming
+ * orders for the last units of a product at the same moment) could both read
+ * the same pre-write `available`/`reserved` value under Postgres's default
+ * READ COMMITTED isolation, both pass the application-level check, and both
+ * apply their write — overselling stock. The row lock forces the second
+ * transaction to block until the first commits (or rolls back) and reads the
+ * now-current row, so the check-then-write is effectively atomic per row.
  */
 @Injectable()
 export class StockService {
@@ -88,7 +99,7 @@ export class StockService {
     const { companyId, productId, warehouseId, quantity, referenceType, referenceId, actorUserId } = params;
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.stockItem.findFirst({ where: { companyId, productId, warehouseId } });
+      const existing = await this.lockStockItemForUpdate(tx, companyId, productId, warehouseId);
       const onHand = existing?.quantityOnHand ?? 0;
       const reserved = existing?.quantityReserved ?? 0;
       const available = onHand - reserved;
@@ -133,7 +144,7 @@ export class StockService {
     const { companyId, productId, warehouseId, quantity, referenceType, referenceId, actorUserId } = params;
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.stockItem.findFirst({ where: { companyId, productId, warehouseId } });
+      const existing = await this.lockStockItemForUpdate(tx, companyId, productId, warehouseId);
       const reserved = existing?.quantityReserved ?? 0;
 
       if (reserved < quantity) {
@@ -181,7 +192,7 @@ export class StockService {
     const { companyId, productId, warehouseId, quantity, referenceType, referenceId, actorUserId } = params;
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.stockItem.findFirst({ where: { companyId, productId, warehouseId } });
+      const existing = await this.lockStockItemForUpdate(tx, companyId, productId, warehouseId);
       const reserved = existing?.quantityReserved ?? 0;
 
       if (reserved < quantity) {
@@ -229,7 +240,7 @@ export class StockService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.stockItem.findFirst({ where: { companyId, productId, warehouseId } });
+      const existing = await this.lockStockItemForUpdate(tx, companyId, productId, warehouseId);
       const currentOnHand = existing?.quantityOnHand ?? 0;
 
       if (currentOnHand + delta < 0) {
@@ -271,6 +282,31 @@ export class StockService {
     if (!Number.isFinite(quantity) || quantity <= 0) {
       throw new Error(`quantity must be a positive number, got ${quantity}`);
     }
+  }
+
+  /**
+   * Read a StockItem row with a `SELECT ... FOR UPDATE` row lock, inside the
+   * caller's transaction — see the class docblock's "Concurrency" note for
+   * why this replaces a plain `findFirst` in every mutator. Returns
+   * `undefined` if no row exists yet (nothing to lock — safe, since the only
+   * caller that creates a brand-new row, `adjust()`'s upsert, relies on
+   * Postgres's atomic `INSERT ... ON CONFLICT` for that specific race, not on
+   * this lock).
+   */
+  private async lockStockItemForUpdate(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    productId: string,
+    warehouseId: string,
+  ): Promise<
+    { id: string; quantityOnHand: number; quantityReserved: number; reorderPoint: number } | undefined
+  > {
+    const rows = await tx.$queryRaw<
+      Array<{ id: string; quantityOnHand: number; quantityReserved: number; reorderPoint: number }>
+    >(
+      Prisma.sql`SELECT "id", "quantityOnHand", "quantityReserved", "reorderPoint" FROM "StockItem" WHERE "companyId" = ${companyId} AND "productId" = ${productId} AND "warehouseId" = ${warehouseId} FOR UPDATE`,
+    );
+    return rows[0];
   }
 
   private async emitStockUpdated(

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
   deleteWarehouse,
   getWarehouse,
@@ -23,7 +24,7 @@ function toFormValues(warehouse: WarehouseDto): WarehouseFormValues {
   };
 }
 
-export default function WarehouseDetailPage() {
+function WarehouseDetailContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -130,5 +131,13 @@ export default function WarehouseDetailPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function WarehouseDetailPage() {
+  return (
+    <RequirePermissionPage permission={PERMISSIONS.INVENTORY_WAREHOUSE_MANAGE}>
+      <WarehouseDetailContent />
+    </RequirePermissionPage>
   );
 }

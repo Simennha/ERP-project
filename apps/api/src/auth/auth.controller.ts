@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
   loginSchema,
@@ -39,7 +40,12 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
+  // Stricter than the app-wide default (see app.module.ts) — login is the one
+  // endpoint worth protecting from credential-stuffing/brute-force
+  // specifically. 5 attempts/minute per IP is generous for a real user
+  // (typos happen) but hostile to automated guessing.
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -54,8 +60,11 @@ export class AuthController {
     return { accessToken, user };
   }
 
+  // Looser than login (refresh legitimately fires on every reload/new tab)
+  // but still bounded — refresh tokens are themselves bearer credentials.
   @Public()
   @UseGuards(JwtRefreshGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
