@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { RedisIoAdapter } from './core/event-bus/redis-io.adapter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -28,11 +29,16 @@ async function bootstrap(): Promise<void> {
   // Consistent JSON error shape for every thrown error.
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // --- Real-time (LATER PHASE) ---------------------------------------------
-  // The default Express HTTP adapter is used here on purpose: a Socket.io
-  // gateway backed by Redis pub/sub can be attached in a later phase (e.g. an
-  // EventsModule with @WebSocketGateway) without changing this bootstrap.
-  // No server restructuring is required at that point.
+  // --- Real-time (Phase 2 event bus) ---------------------------------------
+  // Attach the Socket.io adapter backed by a Redis pub/sub pair so WebSocket
+  // room broadcasts fan out across API instances. connectToRedis() degrades
+  // gracefully to the in-memory adapter when Redis is unavailable (dev), so it
+  // must run before useWebSocketAdapter() and before app.listen() binds the
+  // RealtimeGateway. The HTTP Express adapter is untouched — Socket.io shares
+  // the same underlying HTTP server.
+  const redisIoAdapter = new RedisIoAdapter(app, config);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const port = Number(config.get<string>('PORT') ?? '3001');
   await app.listen(port);
