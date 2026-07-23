@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
-import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, StatusBadge, buttonVariants, type StatusTone } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { deleteProject, getProject, updateProject, type ProjectDto } from '@/lib/projects/api';
@@ -16,6 +16,14 @@ const STATUS_LABELS: Record<string, string> = {
   onHold: 'On hold',
   completed: 'Completed',
   cancelled: 'Cancelled',
+};
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  planned: 'neutral',
+  active: 'success',
+  onHold: 'warning',
+  completed: 'info',
+  cancelled: 'danger',
 };
 
 /** ISO datetime string -> `YYYY-MM-DD` for an `<input type="date">`, or ''. */
@@ -143,7 +151,13 @@ function ProjectDetailContent() {
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <Detail label="Status" value={STATUS_LABELS[project.status] ?? project.status} />
+            <p>
+              <span className="text-muted-foreground">Status: </span>
+              <StatusBadge
+                label={STATUS_LABELS[project.status] ?? project.status}
+                tone={STATUS_TONE[project.status] ?? 'neutral'}
+              />
+            </p>
             <Detail
               label="Start date"
               value={project.startDate ? new Date(project.startDate).toLocaleDateString() : '—'}

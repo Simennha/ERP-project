@@ -8,17 +8,19 @@
  * Dark mode is class-based (`.dark` on <html>).
  */
 /*
- * Color palette: a confident blue accent (professional, trustworthy — the
- * usual register for a business/ERP tool) over cool blue-tinted neutrals,
- * replacing the generic black/white/gray shadcn default. Status colors
- * (emerald=active/success, amber=warning, red=destructive) used ad hoc
- * throughout feature pages (KpiCard deltas, status badges) are unchanged —
- * this only re-themes the core UI chrome (buttons, cards, borders, focus
- * rings) that flows through every component via these variables.
+ * Color palette: SAP Fiori-inspired — a saturated SAP-blue accent (close to
+ * Fiori's #0070F2) over a light neutral-gray canvas (not pure white), with
+ * white cards floating on top for contrast, plus a permanently dark navy
+ * "shell" tone for the top app bar (`--shell-*`). Fiori's shell bar stays
+ * dark regardless of light/dark content theme — that's why the shell tokens
+ * barely change between :root and .dark below, unlike every other token.
+ * Status colors (emerald=active/success, amber=warning, red=destructive)
+ * used ad hoc throughout feature pages (KpiCard deltas, StatusBadge) are
+ * unchanged.
  */
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 20% 97%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -27,56 +29,66 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
+    --primary: 212 100% 47%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 221 30% 95%;
+    --secondary: 212 30% 94%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 220 20% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 14% 40%;
 
-    --accent: 221 60% 94%;
+    --accent: 212 60% 93%;
     --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 221 83% 53%;
+    --border: 210 16% 85%;
+    --input: 210 16% 85%;
+    --ring: 212 100% 47%;
 
-    --radius: 0.5rem;
+    --shell-background: 210 30% 22%;
+    --shell-foreground: 0 0% 100%;
+    --shell-border: 210 25% 32%;
+    --shell-accent: 210 25% 30%;
+
+    --radius: 0.25rem;
   }
 
   .dark {
-    --background: 222 47% 7%;
+    --background: 210 22% 8%;
     --foreground: 210 40% 98%;
 
-    --card: 222 40% 10%;
+    --card: 210 24% 12%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 40% 10%;
+    --popover: 210 24% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 212 100% 60%;
     --primary-foreground: 222 47% 11%;
 
-    --secondary: 217 33% 18%;
+    --secondary: 210 22% 18%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 18%;
+    --muted: 210 22% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 217 40% 22%;
+    --accent: 210 30% 22%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 63% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 217 91% 60%;
+    --border: 210 22% 20%;
+    --input: 210 22% 20%;
+    --ring: 212 100% 60%;
+
+    --shell-background: 210 35% 12%;
+    --shell-foreground: 0 0% 100%;
+    --shell-border: 210 28% 20%;
+    --shell-accent: 210 28% 18%;
   }
 }
 

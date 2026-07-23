@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/auth-context';
 
 /**
- * Section layout for /projects/*. Handles the shared "must be signed in"
- * redirect once (matching the dashboard page's pattern). No local section nav
- * — Projects has exactly one resource, and AppShell's global top nav already
- * links straight to it. Per-page permission checks (create/edit/delete) are
- * still done in each page via `useAuth().hasPermission(...)`.
+ * Section layout for /admin/*. Matches the Workflows layout's "must be
+ * signed in" pattern (own <main id="main-content"> landmark, matching every
+ * other module) — per-page permission gating (RequirePermissionPage) still
+ * handles the actual admin:users.manage check and its "Access denied" UI.
  */
-export default function ProjectsLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
@@ -23,14 +22,13 @@ export default function ProjectsLayout({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
+      <main id="main-content" className="flex min-h-screen items-center justify-center">
         <p className="text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   if (!user) {
-    // Redirect effect will fire; render nothing meanwhile.
     return null;
   }
 

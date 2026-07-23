@@ -20,16 +20,17 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
-      <nav className="flex items-center gap-1 border-b border-border pb-3">
+    <main id="main-content" className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+      <nav aria-label="Sales navigation" className="flex items-center gap-1 border-b border-border pb-3">
         {NAV.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? 'page' : undefined}
               className={cn(
-                'px-3 py-1.5 text-sm font-medium transition-colors',
+                'px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 active
                   ? 'bg-secondary text-secondary-foreground'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',

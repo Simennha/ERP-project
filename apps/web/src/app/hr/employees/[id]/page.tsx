@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
-import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, StatusBadge, buttonVariants, type StatusTone } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { deleteEmployee, getEmployee, updateEmployee, type EmployeeDto } from '@/lib/hr/api';
@@ -14,6 +14,12 @@ const STATUS_LABEL: Record<string, string> = {
   active: 'Active',
   onLeave: 'On leave',
   terminated: 'Terminated',
+};
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  active: 'success',
+  onLeave: 'warning',
+  terminated: 'neutral',
 };
 
 function toFormValues(employee: EmployeeDto): EmployeeFormValues {
@@ -138,7 +144,13 @@ function EmployeeDetailContent() {
           <CardContent className="space-y-1 text-sm">
             <Detail label="Job title" value={employee.jobTitle ?? '—'} />
             <Detail label="Department" value={employee.department ?? '—'} />
-            <Detail label="Status" value={STATUS_LABEL[employee.employmentStatus] ?? employee.employmentStatus} />
+            <p>
+              <span className="text-muted-foreground">Status: </span>
+              <StatusBadge
+                label={STATUS_LABEL[employee.employmentStatus] ?? employee.employmentStatus}
+                tone={STATUS_TONE[employee.employmentStatus] ?? 'neutral'}
+              />
+            </p>
             <Detail label="Hire date" value={new Date(employee.hireDate).toLocaleDateString()} />
           </CardContent>
         </Card>

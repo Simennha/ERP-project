@@ -3,7 +3,7 @@ import { buttonVariants } from '@erp/ui';
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-6 px-6 text-center">
+    <main id="main-content" className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-6 px-6 text-center">
       <div className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">ERP System</h1>
         <p className="text-muted-foreground">

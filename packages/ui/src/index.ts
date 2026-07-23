@@ -16,3 +16,4 @@ export {
   type DataTableColumn,
   type DataTableProps,
 } from './components/data-table';
+export { StatusBadge, type StatusBadgeProps, type StatusTone } from './components/status-badge';

@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Button,
   DataTable,
+  StatusBadge,
   cn,
   type DataTableColumn,
+  type StatusTone,
 } from '@erp/ui';
 import { PERMISSIONS } from '@erp/contracts';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -15,6 +17,13 @@ import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listOrders, type SalesOrderListItem } from '@/lib/sales/api-client';
 
 const STATUSES = ['draft', 'confirmed', 'fulfilled', 'cancelled'] as const;
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: 'neutral',
+  confirmed: 'info',
+  fulfilled: 'success',
+  cancelled: 'danger',
+};
 
 function formatMoney(value: string): string {
   const n = Number(value);
@@ -34,7 +43,11 @@ const columns: Array<DataTableColumn<SalesOrderListItem>> = [
     ),
   },
   { key: 'customer', header: 'Customer', cell: (o) => o.customerName ?? <span className="text-muted-foreground">—</span> },
-  { key: 'status', header: 'Status', cell: (o) => <span className="capitalize">{o.status}</span> },
+  {
+    key: 'status',
+    header: 'Status',
+    cell: (o) => <StatusBadge label={o.status} tone={STATUS_TONE[o.status] ?? 'neutral'} />,
+  },
   {
     key: 'total',
     header: 'Total',

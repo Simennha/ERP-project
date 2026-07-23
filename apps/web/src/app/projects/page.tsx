@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
-import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
+import { Button, DataTable, StatusBadge, buttonVariants, type DataTableColumn, type StatusTone } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listProjects, type Paginated, type ProjectDto } from '@/lib/projects/api';
@@ -18,12 +18,12 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_CLASSES: Record<string, string> = {
-  planned: 'text-muted-foreground',
-  active: 'text-emerald-600 dark:text-emerald-400',
-  onHold: 'text-amber-600 dark:text-amber-400',
-  completed: 'text-blue-600 dark:text-blue-400',
-  cancelled: 'text-destructive',
+const STATUS_TONE: Record<string, StatusTone> = {
+  planned: 'neutral',
+  active: 'success',
+  onHold: 'warning',
+  completed: 'info',
+  cancelled: 'danger',
 };
 
 function formatDate(value: string | null): string {
@@ -76,9 +76,10 @@ function ProjectsContent() {
       key: 'status',
       header: 'Status',
       cell: (row) => (
-        <span className={STATUS_CLASSES[row.status] ?? 'text-muted-foreground'}>
-          {STATUS_LABELS[row.status] ?? row.status}
-        </span>
+        <StatusBadge
+          label={STATUS_LABELS[row.status] ?? row.status}
+          tone={STATUS_TONE[row.status] ?? 'neutral'}
+        />
       ),
     },
     {

@@ -10,7 +10,9 @@ import {
   CardHeader,
   CardTitle,
   DataTable,
+  StatusBadge,
   type DataTableColumn,
+  type StatusTone,
 } from '@erp/ui';
 import { PERMISSIONS } from '@erp/contracts';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -24,6 +26,13 @@ import {
   type SalesOrderDetail,
   type SalesOrderLine,
 } from '@/lib/sales/api-client';
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: 'neutral',
+  confirmed: 'info',
+  fulfilled: 'success',
+  cancelled: 'danger',
+};
 
 function formatMoney(value: string): string {
   const n = Number(value);
@@ -127,9 +136,7 @@ function OrderDetail({ id }: { id: string }) {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight">{order.orderNumber}</h1>
-            <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium capitalize">
-              {order.status}
-            </span>
+            <StatusBadge label={order.status} tone={STATUS_TONE[order.status] ?? 'neutral'} />
           </div>
           <p className="text-muted-foreground">
             Ordered {new Date(order.orderDate).toLocaleString()}

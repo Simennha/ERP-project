@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
-import { Button, Card, CardContent, CardHeader, CardTitle, Label, buttonVariants } from '@erp/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, Label, StatusBadge, buttonVariants, type StatusTone } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
@@ -15,6 +15,12 @@ import {
 } from '@/lib/finance/api';
 
 const STATUS_OPTIONS = ['draft', 'sent', 'paid'] as const;
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: 'neutral',
+  sent: 'info',
+  paid: 'success',
+};
 
 function InvoiceDetailContent() {
   const router = useRouter();
@@ -152,7 +158,10 @@ function InvoiceDetailContent() {
           <Detail label="Sales order" value={invoice.salesOrderNumber} />
           <Detail label="Customer" value={invoice.customerName} />
           <Detail label="Total amount" value={invoice.totalAmount} />
-          <Detail label="Status" value={invoice.status} />
+          <p>
+            <span className="text-muted-foreground">Status: </span>
+            <StatusBadge label={invoice.status} tone={STATUS_TONE[invoice.status] ?? 'neutral'} />
+          </p>
           <Detail label="Created" value={new Date(invoice.createdAt).toLocaleString()} />
           <Detail label="Updated" value={new Date(invoice.updatedAt).toLocaleString()} />
         </CardContent>

@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@erp/ui';
 import { adjustStock, type StockItemDto } from '@/lib/inventory/api';
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Small modal form to adjust a single stock row's on-hand quantity. Posts a
@@ -25,6 +28,45 @@ export function AdjustDialog({
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Captured via a lazy initializer so it runs during this component's first
+  // render, before its own DOM (and the delta input's autoFocus) mounts —
+  // capturing it in an effect instead would run too late, since autoFocus has
+  // already moved document.activeElement onto the dialog by then.
+  const [triggerElement] = useState<HTMLElement | null>(() => document.activeElement as HTMLElement | null);
+
+  // Focus trap + Escape-to-close + return focus to whatever opened the
+  // dialog. This is the only custom modal in the app (the shared UI kit has
+  // no Dialog primitive yet), so the logic lives here rather than a shared hook.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      triggerElement?.focus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,11 +102,12 @@ export function AdjustDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="adjust-dialog-title"
       onClick={onClose}
     >
-      <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <Card ref={dialogRef} className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <CardHeader>
-          <CardTitle>Adjust stock</CardTitle>
+          <CardTitle id="adjust-dialog-title">Adjust stock</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-4 text-sm text-muted-foreground">

@@ -3,27 +3,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
-import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
+import { Button, DataTable, StatusBadge, buttonVariants, type DataTableColumn, type StatusTone } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listInvoices, type InvoiceDto, type Paginated } from '@/lib/finance/api';
 
 const PAGE_SIZE = 25;
 
-const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  sent: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
-  paid: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: 'neutral',
+  sent: 'info',
+  paid: 'success',
 };
-
-function StatusBadge({ status }: { status: string }) {
-  const style = STATUS_STYLES[status] ?? 'bg-muted text-muted-foreground';
-  return (
-    <span className={`rounded px-2 py-0.5 text-xs font-medium capitalize ${style}`}>
-      {status}
-    </span>
-  );
-}
 
 function InvoicesContent() {
   const { getAccessToken, hasPermission } = useAuth();
@@ -76,7 +67,7 @@ function InvoicesContent() {
     {
       key: 'status',
       header: 'Status',
-      cell: (row) => <StatusBadge status={row.status} />,
+      cell: (row) => <StatusBadge label={row.status} tone={STATUS_TONE[row.status] ?? 'neutral'} />,
     },
     {
       key: 'createdAt',

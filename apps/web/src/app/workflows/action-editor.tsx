@@ -87,6 +87,7 @@ export function ActionEditor({
     <div className="space-y-3 rounded-md border border-border p-4">
       <div className="flex items-center justify-between gap-2">
         <select
+          aria-label="Action type"
           value={action.type}
           onChange={(e) => setType(e.target.value as WorkflowActionType)}
           className="h-9 rounded-md border border-input bg-background px-2 text-sm"
@@ -98,11 +99,25 @@ export function ActionEditor({
           ))}
         </select>
         <div className="flex gap-1">
-          <Button type="button" variant="ghost" size="sm" onClick={onMoveUp} disabled={!canMoveUp}>
-            ↑
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            aria-label="Move action up"
+          >
+            <span aria-hidden="true">↑</span>
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onMoveDown} disabled={!canMoveDown}>
-            ↓
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            aria-label="Move action down"
+          >
+            <span aria-hidden="true">↓</span>
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
             Remove

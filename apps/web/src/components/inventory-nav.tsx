@@ -21,15 +21,16 @@ export function InventoryNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1 border-b border-border pb-3">
+    <nav aria-label="Inventory navigation" className="flex items-center gap-1 border-b border-border pb-3">
       {LINKS.map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
           <Link
             key={link.href}
             href={link.href}
+            aria-current={active ? 'page' : undefined}
             className={cn(
-              'px-3 py-1.5 text-sm font-medium transition-colors',
+              'px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
               active
                 ? 'bg-secondary text-secondary-foreground'
                 : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',

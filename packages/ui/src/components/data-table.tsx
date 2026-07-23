@@ -21,12 +21,16 @@ export interface DataTableProps<T> {
   rowClassName?: (row: T, index: number) => string | undefined;
   emptyMessage?: React.ReactNode;
   className?: string;
+  /** Accessible name for the table, e.g. "Products" — read by screen readers before the column headers. */
+  ariaLabel?: string;
 }
 
 /**
- * Presentational, generic data table (shadcn/ui table styling).
- * Sorting/paging/selection are intentionally out of scope for this phase;
- * later phases can layer state on top or swap in @tanstack/react-table.
+ * Presentational, generic data table (shadcn/ui table styling, tuned toward
+ * a denser SAP Fiori-style list: a tinted header bar with small, uppercase,
+ * letter-spaced column labels and tighter row padding than the shadcn
+ * default). Sorting/paging/selection are intentionally out of scope for this
+ * phase; later phases can layer state on top or swap in @tanstack/react-table.
  */
 export function DataTable<T>({
   columns,
@@ -35,17 +39,19 @@ export function DataTable<T>({
   rowClassName,
   emptyMessage = 'No data',
   className,
+  ariaLabel,
 }: DataTableProps<T>) {
   return (
     <div className={cn('w-full overflow-x-auto rounded-md border border-border', className)}>
-      <table className="w-full caption-bottom text-sm">
+      <table className="w-full caption-bottom text-sm" aria-label={ariaLabel}>
         <thead>
-          <tr className="border-b border-border">
+          <tr className="border-b border-border bg-muted/60">
             {columns.map((col) => (
               <th
                 key={col.key}
+                scope="col"
                 className={cn(
-                  'h-10 px-3 text-left align-middle font-medium text-muted-foreground',
+                  'h-9 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground',
                   col.className,
                 )}
               >
@@ -71,7 +77,7 @@ export function DataTable<T>({
                 )}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={cn('p-3 align-middle', col.className)}>
+                  <td key={col.key} className={cn('px-3 py-2 align-middle', col.className)}>
                     {col.cell(row)}
                   </td>
                 ))}

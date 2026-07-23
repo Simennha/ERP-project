@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
-import { Button, DataTable, Label, buttonVariants, type DataTableColumn } from '@erp/ui';
+import { Button, DataTable, Label, StatusBadge, buttonVariants, type DataTableColumn, type StatusTone } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
@@ -21,16 +21,11 @@ const STATUS_LABEL: Record<string, string> = {
   terminated: 'Terminated',
 };
 
-function StatusBadge({ status }: { status: string }) {
-  const label = STATUS_LABEL[status] ?? status;
-  const className =
-    status === 'active'
-      ? 'text-emerald-600 dark:text-emerald-400'
-      : status === 'onLeave'
-        ? 'text-amber-600 dark:text-amber-400'
-        : 'text-muted-foreground';
-  return <span className={className}>{label}</span>;
-}
+const STATUS_TONE: Record<string, StatusTone> = {
+  active: 'success',
+  onLeave: 'warning',
+  terminated: 'neutral',
+};
 
 function EmployeesContent() {
   const { getAccessToken, hasPermission } = useAuth();
@@ -94,7 +89,12 @@ function EmployeesContent() {
     {
       key: 'employmentStatus',
       header: 'Status',
-      cell: (row) => <StatusBadge status={row.employmentStatus} />,
+      cell: (row) => (
+        <StatusBadge
+          label={STATUS_LABEL[row.employmentStatus] ?? row.employmentStatus}
+          tone={STATUS_TONE[row.employmentStatus] ?? 'neutral'}
+        />
+      ),
     },
     {
       key: 'hireDate',

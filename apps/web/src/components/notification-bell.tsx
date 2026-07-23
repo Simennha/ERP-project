@@ -34,6 +34,7 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const refresh = useCallback(async () => {
     const token = getAccessToken();
@@ -78,8 +79,18 @@ export function NotificationBell() {
         setOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [open]);
 
   const handleSelect = useCallback(
@@ -112,10 +123,13 @@ export function NotificationBell() {
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
-        aria-label="Notifications"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+        aria-haspopup="true"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-none border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-accent"
+        className="relative flex h-9 w-9 items-center justify-center rounded-none text-shell-foreground transition-colors hover:bg-shell-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -138,9 +152,15 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 rounded-lg border border-border bg-card text-card-foreground shadow-lg">
+        <div
+          role="region"
+          aria-labelledby="notification-bell-heading"
+          className="absolute right-0 mt-2 w-80 rounded-lg border border-border bg-card text-card-foreground shadow-lg"
+        >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <span className="text-sm font-semibold">Notifications</span>
+            <span id="notification-bell-heading" className="text-sm font-semibold">
+              Notifications
+            </span>
             {unreadCount > 0 && (
               <span className="text-xs text-muted-foreground">{unreadCount} unread</span>
             )}
@@ -160,7 +180,7 @@ export function NotificationBell() {
                       type="button"
                       onClick={() => void handleSelect(notification)}
                       className={cn(
-                        'flex w-full flex-col gap-0.5 border-b border-border px-4 py-3 text-left text-sm transition-colors last:border-b-0 hover:bg-accent',
+                        'flex w-full flex-col gap-0.5 border-b border-border px-4 py-3 text-left text-sm transition-colors last:border-b-0 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                         !notification.isRead && 'bg-secondary/50',
                       )}
                     >
