@@ -2,18 +2,29 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EventBusModule } from '../core/event-bus/event-bus.module';
 import { StockService } from './stock.service';
+import { StockReadService } from './stock-read.service';
+import { ProductsService } from './products.service';
+import { WarehousesService } from './warehouses.service';
+import { ProductsController } from './products.controller';
+import { WarehousesController } from './warehouses.controller';
+import { StockController } from './stock.controller';
 
 /**
- * Inventory module. Ships with just {@link StockService} for now (the
- * reserve/commitReservation/release/adjust contract Sales depends on) —
- * Product/Warehouse CRUD controllers and read endpoints are added on top of
- * this same module in a follow-up pass.
+ * Inventory module.
  *
- * Exports StockService so Sales (and any other module) can inject it directly.
+ * {@link StockService} remains the single write-path for stock mutation (the
+ * reserve/commitReservation/release/adjust contract Sales depends on) and is
+ * still exported so Sales (and any other module) can inject it directly.
+ *
+ * Layered on top in this pass:
+ *  - Product / Warehouse CRUD ({@link ProductsController} / {@link WarehousesController}).
+ *  - Read-only stock queries + a stock-adjust endpoint ({@link StockController}),
+ *    where adjust delegates to StockService.adjust() — no new mutation path.
  */
 @Module({
   imports: [PrismaModule, EventBusModule],
-  providers: [StockService],
+  controllers: [ProductsController, WarehousesController, StockController],
+  providers: [StockService, StockReadService, ProductsService, WarehousesService],
   exports: [StockService],
 })
 export class InventoryModule {}

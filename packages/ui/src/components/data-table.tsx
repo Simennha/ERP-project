@@ -17,6 +17,8 @@ export interface DataTableProps<T> {
   data: T[];
   /** Derive a stable row key; falls back to the row index. */
   getRowId?: (row: T, index: number) => string;
+  /** Optional extra classes per body row, e.g. to highlight rows by state. */
+  rowClassName?: (row: T, index: number) => string | undefined;
   emptyMessage?: React.ReactNode;
   className?: string;
 }
@@ -30,6 +32,7 @@ export function DataTable<T>({
   columns,
   data,
   getRowId,
+  rowClassName,
   emptyMessage = 'No data',
   className,
 }: DataTableProps<T>) {
@@ -62,7 +65,10 @@ export function DataTable<T>({
             data.map((row, index) => (
               <tr
                 key={getRowId ? getRowId(row, index) : String(index)}
-                className="border-b border-border transition-colors hover:bg-muted/50"
+                className={cn(
+                  'border-b border-border transition-colors hover:bg-muted/50',
+                  rowClassName?.(row, index),
+                )}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={cn('p-3 align-middle', col.className)}>

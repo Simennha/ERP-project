@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@erp/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 
 export default function DashboardPage() {
@@ -36,9 +37,14 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Logged in as {user.name}</p>
         </div>
-        <Button variant="outline" onClick={() => void logout()}>
-          Log out
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/inventory/products" className={buttonVariants({ variant: 'secondary' })}>
+            Inventory
+          </Link>
+          <Button variant="outline" onClick={() => void logout()}>
+            Log out
+          </Button>
+        </div>
       </div>
 
       <Card>
