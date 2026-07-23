@@ -1,0 +1,71 @@
+// Workflow / automation engine — DB-configured rules, not a visual canvas
+// builder. A WorkflowDefinition fires when `triggerEvent` (one of the
+// EventName values in @erp/contracts) is published on the event bus, if
+// `conditionsJson` (a json-logic-js tree, evaluated against the event
+// payload — NEVER raw eval) passes. Its WorkflowActions then run in `order`.
+// Every firing is recorded in WorkflowRun for admin debugging/audit.
+model WorkflowDefinition {
+  id            String   @id @default(cuid())
+  companyId     String
+  name          String
+  // Module this workflow belongs to for grouping in the admin UI, e.g. "inventory".
+  module        String
+  // One of @erp/contracts EVENTS, e.g. "inventory.stock.updated".
+  triggerEvent  String
+  // json-logic-js condition tree evaluated against the event payload.
+  // Null/empty = always run (no extra condition beyond the trigger matching).
+  conditionsJson Json?
+  isActive      Boolean  @default(true)
+  createdById   String?
+  updatedById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actions   WorkflowAction[]
+  runs      WorkflowRun[]
+  createdBy User?            @relation("WorkflowDefinitionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?            @relation("WorkflowDefinitionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([triggerEvent])
+}
+
+// One ordered step of a WorkflowDefinition. `type` selects the handler in the
+// backend's ActionHandlerRegistry; `configJson` is that handler's own input
+// shape (see @erp/contracts workflow action config types for each `type`).
+model WorkflowAction {
+  id                   String   @id @default(cuid())
+  workflowDefinitionId String
+  order                Int
+  // 'notify' | 'updateField' | 'createRecord' | 'callWebhook' | 'assignTask'
+  type                 String
+  configJson           Json
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  workflowDefinition WorkflowDefinition @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([workflowDefinitionId, order])
+}
+
+// One record per trigger firing (whether or not conditions passed), so admins
+// can see why a workflow did/didn't run and debug misconfigured rules.
+model WorkflowRun {
+  id                   String   @id @default(cuid())
+  workflowDefinitionId String
+  // The DomainEvent.name that triggered this evaluation.
+  triggeredByEvent     String
+  // 'matched' (conditions passed, actions ran) | 'skipped' (conditions failed)
+  // | 'error' (an action threw)
+  status               String
+  // Per-action outcome: [{ actionId, type, status: 'ok'|'error', error? }]
+  resultJson           Json?
+  error                String?
+  createdAt            DateTime @default(now())
+
+  workflowDefinition WorkflowDefinition @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([workflowDefinitionId])
+  @@index([createdAt])
+}

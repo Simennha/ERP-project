@@ -1,0 +1,27 @@
+// In-app notifications. Written by NotificationService.send(), which is
+// called both directly by services and by the workflow engine's `notify`
+// action (see workflow.prisma). Delivery = this persisted row (bell icon /
+// history) + a live push over the recipient's Socket.io `user:{id}` room —
+// the row is the source of truth, the push is just a UI convenience.
+model Notification {
+  id          String    @id @default(cuid())
+  companyId   String
+  userId      String
+  type        String
+  title       String
+  body        String?
+  link        String?
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  // Name of the domain event (see @erp/contracts EVENTS) that triggered this
+  // notification, if any — lets the UI/debugging trace notify->cause.
+  sourceEvent String?
+  createdAt   DateTime  @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+}

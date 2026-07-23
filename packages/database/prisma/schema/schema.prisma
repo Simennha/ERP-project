@@ -11,9 +11,18 @@
 //
 // Client is generated to the default location (node_modules/.prisma/client)
 // and re-exported through @erp/database (see ../src/index.ts).
+//
+// SCHEMA IS SPLIT ACROSS FILES in this directory (prismaSchemaFolder preview
+// feature) specifically so parallel workstreams (workflow engine,
+// notifications, later business modules) each add their own *.prisma file
+// here instead of all editing this one — see notification.prisma,
+// workflow.prisma, event-log.prisma for examples of the pattern to follow.
+// Prisma merges every *.prisma file in this folder into one schema at
+// generate/migrate time; relations can reference models defined in ANY file.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
 }
 
 datasource db {
@@ -29,10 +38,13 @@ model Company {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  departments Department[]
-  users       User[]
-  roles       Role[]
-  auditLogs   AuditLog[]
+  departments   Department[]
+  users         User[]
+  roles         Role[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  workflowDefinitions WorkflowDefinition[]
+  eventLogs     EventLog[]
 }
 
 model Department {
@@ -67,16 +79,19 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  department Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  userRoles  UserRole[]
-  auditLogs  AuditLog[]
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department    Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  userRoles     UserRole[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
 
   // Back-relations for authorship FKs on other models.
-  departmentsCreated Department[] @relation("DepartmentCreatedBy")
-  departmentsUpdated Department[] @relation("DepartmentUpdatedBy")
-  rolesCreated       Role[]       @relation("RoleCreatedBy")
-  rolesUpdated       Role[]       @relation("RoleUpdatedBy")
+  departmentsCreated         Department[]         @relation("DepartmentCreatedBy")
+  departmentsUpdated         Department[]         @relation("DepartmentUpdatedBy")
+  rolesCreated               Role[]               @relation("RoleCreatedBy")
+  rolesUpdated               Role[]               @relation("RoleUpdatedBy")
+  workflowDefinitionsCreated WorkflowDefinition[]  @relation("WorkflowDefinitionCreatedBy")
+  workflowDefinitionsUpdated WorkflowDefinition[]  @relation("WorkflowDefinitionUpdatedBy")
 
   @@unique([companyId, email])
   @@index([companyId])

@@ -16,6 +16,7 @@
   },
   "files": ["dist", "prisma"],
   "prisma": {
+    "schema": "prisma/schema",
     "seed": "dotenv -e ../../.env -- ts-node prisma/seed.ts"
   },
   "scripts": {

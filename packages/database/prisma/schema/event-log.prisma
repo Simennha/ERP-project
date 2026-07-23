@@ -1,0 +1,20 @@
+// Durable log of every domain event published on the event bus (see
+// apps/api/src/core/event-bus). Cheap insurance: lets the workflow engine's
+// "why didn't this fire" debugging and any future replay/backfill tooling
+// look at what actually happened, independent of EventEmitter2's in-memory,
+// fire-and-forget delivery.
+model EventLog {
+  id        String   @id @default(cuid())
+  companyId String
+  // One of @erp/contracts EVENTS.
+  eventName String
+  payloadJson Json
+  actorUserId String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([eventName])
+  @@index([createdAt])
+}
