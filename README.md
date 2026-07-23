@@ -11,6 +11,30 @@ This file is written for **whoever (human or another Claude instance) picks this
 project up next**, possibly on a different machine with no memory of how it was
 built. Read this before touching code.
 
+## Starting a new Claude Code session on this project
+
+Tell it something like:
+
+> Read README.md end to end, then check `git log --oneline -20` and
+> `git status` to confirm the repo matches what it describes. Then read the
+> "Handoff" section and either pick up the top-priority item there, or ask me
+> which of the "Suggested next phases" to prioritize before starting.
+
+What that gets you: the session orients itself (current status, architecture,
+conventions, where the last one stopped) before writing anything, confirms
+the repo's actual state matches this file rather than assuming it, and checks
+with you on priority instead of silently guessing which unfinished thread to
+pull on. It should also check whether Node.js/pnpm/Docker are installed on
+*this* machine — that determines whether it can run `pnpm typecheck`/`pnpm
+dev` to verify its own changes as it goes, or whether it's back to the
+hand-review discipline described in "How this was built" below (the machine
+this project was originally built on had none of those installed).
+
+If you already know exactly what you want next (e.g. "build the notifications
+bell" or "start on the HR module"), just say that directly — the session will
+still benefit from reading this file first, but you don't need the generic
+prompt above.
+
 ## Current status (what's real vs. what's a stub)
 
 | Area | Status |
