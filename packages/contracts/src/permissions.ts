@@ -21,6 +21,7 @@ export const PERMISSIONS = {
   ROLES_MANAGE: 'admin:roles.manage',
   COMPANY_SETTINGS_MANAGE: 'admin:company.settings',
   AUDIT_LOG_READ: 'admin:audit.read',
+  WORKFLOW_MANAGE: 'admin:workflow.manage',
 
   // --- Inventory (placeholder resource: product + stock) --------------------
   INVENTORY_PRODUCT_READ: 'inventory:product.read',
@@ -103,6 +104,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: PERMISSIONS.ROLES_MANAGE, module: 'admin', description: 'Create and edit roles and their permissions' },
   { key: PERMISSIONS.COMPANY_SETTINGS_MANAGE, module: 'admin', description: 'Manage company-wide settings' },
   { key: PERMISSIONS.AUDIT_LOG_READ, module: 'admin', description: 'Read the audit log' },
+  { key: PERMISSIONS.WORKFLOW_MANAGE, module: 'admin', description: 'Create and edit workflow automations' },
 
   // Inventory
   { key: PERMISSIONS.INVENTORY_PRODUCT_READ, module: 'inventory', description: 'View products' },
