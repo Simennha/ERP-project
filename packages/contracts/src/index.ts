@@ -6,3 +6,4 @@ export * from './workflow';
 export * from './notifications';
 export * from './audit';
 export * from './dashboard';
+export * from './reporting';

@@ -20,6 +20,7 @@ import { FinanceModule } from './finance/finance.module';
 import { HrModule } from './hr/hr.module';
 import { ProcurementModule } from './procurement/procurement.module';
 import { ProjectsModule } from './projects/projects.module';
+import { ReportingModule } from './reporting/reporting.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ProjectsModule } from './projects/projects.module';
     HrModule,
     ProcurementModule,
     ProjectsModule,
+    ReportingModule,
   ],
   controllers: [AppController],
   providers: [

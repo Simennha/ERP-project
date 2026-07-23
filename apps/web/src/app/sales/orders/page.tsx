@@ -11,7 +11,7 @@ import {
 } from '@erp/ui';
 import { PERMISSIONS } from '@erp/contracts';
 import { useAuth } from '@/lib/auth/auth-context';
-import { RequirePermissionPage } from '@/lib/sales/page-guard';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { listOrders, type SalesOrderListItem } from '@/lib/sales/api-client';
 
 const STATUSES = ['draft', 'confirmed', 'fulfilled', 'cancelled'] as const;

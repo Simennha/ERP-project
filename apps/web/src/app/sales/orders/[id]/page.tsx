@@ -15,7 +15,7 @@ import {
 import { PERMISSIONS } from '@erp/contracts';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useDomainEvents } from '@/lib/realtime/use-domain-events';
-import { RequirePermissionPage } from '@/lib/sales/page-guard';
+import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import {
   cancelOrder,
   confirmOrder,

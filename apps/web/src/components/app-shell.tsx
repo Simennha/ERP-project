@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/hr/employees', label: 'HR', requiredPermission: PERMISSIONS.HR_EMPLOYEE_READ },
   { href: '/procurement/purchase-orders', label: 'Procurement', requiredPermission: PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_READ },
   { href: '/projects', label: 'Projects', requiredPermission: PERMISSIONS.PROJECTS_PROJECT_READ },
+  { href: '/reporting/reports', label: 'Reporting', requiredPermission: PERMISSIONS.REPORTING_REPORT_READ },
   { href: '/workflows', label: 'Workflows', requiredPermission: PERMISSIONS.WORKFLOW_MANAGE },
 ];
 

@@ -1,0 +1,31 @@
+// Reporting module. A `Report` is a saved report *definition* (name +
+// reportType + optional filters), not a cached result — running it always
+// re-queries live data from whichever module `reportType` points at. This
+// mirrors the WorkflowDefinition pattern (a saved config, not a snapshot).
+// The fixed set of report types (see @erp/contracts reporting.ts) each map
+// to one hand-written cross-module query, not a generic ad hoc query
+// builder — deliberately, same "form-based, not a builder" scoping used for
+// workflow conditions.
+
+model Report {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  // One of @erp/contracts REPORT_TYPES, e.g. "salesByCustomer".
+  reportType  String
+  // Optional filter params (dateFrom/dateTo/status), shape depends on
+  // reportType — see REPORT_TYPE_DEFINITIONS' `filters` field for which ones
+  // a given type actually reads.
+  filtersJson Json?
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("ReportCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("ReportUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}

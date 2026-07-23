@@ -55,6 +55,7 @@ model Company {
   employees      Employee[]
   purchaseOrders PurchaseOrder[]
   projects       Project[]
+  reports        Report[]
 }
 
 model Department {
@@ -119,6 +120,8 @@ model User {
   purchaseOrdersUpdated      PurchaseOrder[]        @relation("PurchaseOrderUpdatedBy")
   projectsCreated            Project[]              @relation("ProjectCreatedBy")
   projectsUpdated            Project[]              @relation("ProjectUpdatedBy")
+  reportsCreated             Report[]               @relation("ReportCreatedBy")
+  reportsUpdated             Report[]               @relation("ReportUpdatedBy")
 
   @@unique([companyId, email])
   @@index([companyId])
