@@ -1,0 +1,119 @@
+// Sales module (Phase 3 deep-build). Customer + SalesOrder/SalesOrderLine CRUD,
+// plus the Invoice seed table.
+//
+// ── Money / Decimal ─────────────────────────────────────────────────────────
+// Every money column (unitPrice, lineTotal, totalAmount) is Decimal @db.Decimal(12,2),
+// matching Product.costPrice/salePrice. At runtime Prisma returns these as
+// Decimal.js objects, NOT plain numbers — the API layer (SalesOrdersService DTO
+// mappers in apps/api/src/sales/sales.dto.ts) explicitly calls .toString() on
+// every money field, and the SALES_ORDER_CREATED event payload stringifies
+// totalAmount, rather than relying on default JSON serialization.
+//
+// ── Status columns ──────────────────────────────────────────────────────────
+// `status` on SalesOrder and Invoice are plain String columns (no Prisma enum
+// for v1); the allowed values are listed in the comment above each field.
+//
+// ── Scope of this module ────────────────────────────────────────────────────
+// This file + apps/api/src/sales/ implement CRUD only. The status-transition
+// actions (confirm/fulfill/cancel) and the wiring of order-confirm to the
+// inventory StockService (reserve/commit/release) are a DELIBERATELY separate
+// follow-up integration step and are NOT implemented here.
+
+model Customer {
+  id             String   @id @default(cuid())
+  companyId      String
+  name           String
+  email          String?
+  phone          String?
+  billingAddress String?
+  isActive       Boolean  @default(true)
+  createdById    String?
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy   User?        @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?        @relation("CustomerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  salesOrders SalesOrder[]
+
+  @@index([companyId])
+}
+
+model SalesOrder {
+  id          String   @id @default(cuid())
+  companyId   String
+  customerId  String
+  // Unique per company. Generated in SalesOrdersService as
+  // `SO-{YYYYMMDD}-{6 base36 chars}` (timestamp/date + random suffix — no
+  // sequence counter, so no cross-request race). The @@unique below is the
+  // backstop; on the astronomically-rare collision the create transaction
+  // fails and the client retries. See generateOrderNumber() for details.
+  orderNumber String
+  // Allowed values: 'draft' | 'confirmed' | 'fulfilled' | 'cancelled'.
+  // Plain String column (no Prisma enum for v1). New orders start 'draft';
+  // the confirm/fulfill/cancel transitions are a later integration step.
+  status      String   @default("draft")
+  orderDate   DateTime @default(now())
+  totalAmount Decimal  @db.Decimal(12, 2)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // Restrict: a customer with orders cannot be hard-deleted (CustomersService
+  // also pre-checks and returns 409, this is the DB-level backstop).
+  customer  Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy User?            @relation("SalesOrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?            @relation("SalesOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  lines     SalesOrderLine[]
+  invoice   Invoice?
+
+  @@unique([companyId, orderNumber])
+  @@index([companyId])
+  @@index([customerId])
+  @@index([status])
+}
+
+model SalesOrderLine {
+  id           String  @id @default(cuid())
+  salesOrderId String
+  productId    String
+  quantity     Int
+  unitPrice    Decimal @db.Decimal(12, 2)
+  // Computed as quantity * unitPrice at write time in SalesOrdersService —
+  // NOT a database generated column.
+  lineTotal    Decimal @db.Decimal(12, 2)
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  // Restrict: a product referenced by an order line cannot be hard-deleted.
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([salesOrderId])
+  @@index([productId])
+}
+
+// Invoice: model + relations ONLY — there is intentionally no InvoiceService or
+// InvoiceController in this module. Nothing populates this table yet; it is the
+// seed for BOTH a later Finance module AND the order-confirm integration step,
+// which will create rows here (invoiceNumber is expected to be generated the
+// same way as orderNumber, e.g. `INV-{YYYYMMDD}-{6 base36 chars}`, by whichever
+// service ends up owning invoice creation).
+model Invoice {
+  id            String   @id @default(cuid())
+  companyId     String
+  salesOrderId  String   @unique
+  invoiceNumber String
+  // Allowed values: 'draft' | 'sent' | 'paid'. Plain String column.
+  status        String   @default("draft")
+  totalAmount   Decimal  @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId])
+}

@@ -34,8 +34,9 @@ interface AuthContextValue {
   /**
    * Current in-memory access token (or null when logged out). Read it at
    * call-time to attach a `Bearer` header when calling protected API endpoints
-   * (see api-client.ts for the fetch pattern). Kept as a getter over the ref so
-   * reading it never triggers a re-render.
+   * (see api-client.ts for the fetch pattern, and lib/inventory/api.ts /
+   * lib/sales/api-client.ts for feature-module usage). Kept as a getter over
+   * the ref so reading it never triggers a re-render.
    */
   getAccessToken: () => string | null;
   /** Re-run the refresh-cookie bootstrap (e.g. after a 401). */
