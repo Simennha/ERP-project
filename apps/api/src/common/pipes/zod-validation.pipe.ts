@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, type PipeTransform } from '@nestjs/common';
-import type { ZodSchema } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 
 /**
  * Validates/parses a value against a zod schema (from @erp/contracts) and
@@ -10,10 +10,16 @@ import type { ZodSchema } from 'zod';
  * The app also enables the standard class-validator ValidationPipe globally
  * for any future class-based DTOs; the two do not conflict because the global
  * pipe skips values whose metatype is a plain object.
+ *
+ * Schema param is typed `ZodType<T, ZodTypeDef, any>` rather than `ZodSchema<T>`
+ * (= `ZodType<T, ZodTypeDef, T>`) because schemas with `.default()` (e.g.
+ * pagination's `page`/`pageSize`) have an Input type that differs from their
+ * Output type T (fields are optional on input, required on output) — only the
+ * parsed Output shape matters here, so the Input type is left unconstrained.
  */
 @Injectable()
 export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
-  constructor(private readonly schema: ZodSchema<T>) {}
+  constructor(private readonly schema: ZodType<T, ZodTypeDef, any>) {}
 
   transform(value: unknown): T {
     const result = this.schema.safeParse(value);

@@ -92,7 +92,7 @@ export class NotificationService {
     const dto = this.toDto(created);
 
     try {
-      this.broadcaster.emitToUser(dto.userId, NOTIFICATION_CREATED_EVENT, dto);
+      this.broadcaster.emitToUser(created.userId, NOTIFICATION_CREATED_EVENT, dto);
     } catch (err) {
       this.logger.warn(
         `real-time broadcast failed for notification ${dto.id}: ${
