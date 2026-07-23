@@ -13,6 +13,7 @@ import {
 } from '@erp/ui';
 import { PERMISSIONS } from '@erp/contracts';
 import { useAuth } from '@/lib/auth/auth-context';
+import { useDomainEvents } from '@/lib/realtime/use-domain-events';
 import { RequirePermissionPage } from '@/lib/sales/page-guard';
 import {
   createOrder,
@@ -130,6 +131,27 @@ function OrderBuilder() {
       }
     },
     [getAccessToken],
+  );
+
+  // Signature real-time demo: if another user/tab reserves, adjusts, or
+  // releases stock for a product currently on this order, refresh that
+  // line's "X available" live — so a race against another order becomes
+  // visible immediately instead of only surfacing as a 409 on submit.
+  useDomainEvents(
+    useCallback(
+      (event) => {
+        const payload = event.payload as { productId?: unknown } | null;
+        const productId = typeof payload?.productId === 'string' ? payload.productId : null;
+        if (!productId) return;
+        for (const line of lines) {
+          if (line.productId === productId) {
+            void fetchAvailability(line.key, productId);
+          }
+        }
+      },
+      [lines, fetchAvailability],
+    ),
+    'inventory.stock.updated',
   );
 
   function updateLine(key: string, patch: Partial<LineDraft>) {

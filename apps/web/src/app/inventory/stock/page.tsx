@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { useDomainEvents } from '@/lib/realtime/use-domain-events';
 import {
   listStock,
   listWarehouses,
@@ -46,28 +47,45 @@ function StockContent() {
     setPage(1);
   }, [warehouseId, lowStock]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setResult(
-        await listStock(getAccessToken(), {
-          warehouseId: warehouseId || undefined,
-          lowStock: lowStock || undefined,
-          page,
-          pageSize: PAGE_SIZE,
-        }),
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load stock');
-    } finally {
-      setLoading(false);
-    }
-  }, [getAccessToken, warehouseId, lowStock, page]);
+  const load = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!opts.silent) setLoading(true);
+      setError(null);
+      try {
+        setResult(
+          await listStock(getAccessToken(), {
+            warehouseId: warehouseId || undefined,
+            lowStock: lowStock || undefined,
+            page,
+            pageSize: PAGE_SIZE,
+          }),
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load stock');
+      } finally {
+        if (!opts.silent) setLoading(false);
+      }
+    },
+    [getAccessToken, warehouseId, lowStock, page],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Signature real-time demo: when ANY stock mutation happens anywhere
+  // (another tab/user reserving, adjusting, committing, or releasing stock),
+  // silently refresh this grid so on-hand/reserved/available stay live
+  // without a manual reload. See apps/api/src/core/event-bus for the
+  // publishing side and use-domain-events.ts for the socket handshake.
+  const [lastLiveUpdate, setLastLiveUpdate] = useState<Date | null>(null);
+  useDomainEvents(
+    useCallback(() => {
+      setLastLiveUpdate(new Date());
+      void load({ silent: true });
+    }, [load]),
+    'inventory.stock.updated',
+  );
 
   // Populate the warehouse filter dropdown (best-effort: needs warehouse:manage).
   useEffect(() => {
@@ -178,11 +196,20 @@ function StockContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Stock levels</h1>
-        <p className="text-muted-foreground">
-          On-hand, reserved and available quantities per product and warehouse.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Stock levels</h1>
+          <p className="text-muted-foreground">
+            On-hand, reserved and available quantities per product and warehouse.
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Updates live as stock changes anywhere — no refresh needed">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          Live
+          {lastLiveUpdate ? (
+            <span>· updated {lastLiveUpdate.toLocaleTimeString()}</span>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

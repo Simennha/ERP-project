@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -13,8 +14,16 @@ import {
 } from '@erp/ui';
 import { PERMISSIONS } from '@erp/contracts';
 import { useAuth } from '@/lib/auth/auth-context';
+import { useDomainEvents } from '@/lib/realtime/use-domain-events';
 import { RequirePermissionPage } from '@/lib/sales/page-guard';
-import { getOrder, type SalesOrderDetail, type SalesOrderLine } from '@/lib/sales/api-client';
+import {
+  cancelOrder,
+  confirmOrder,
+  fulfillOrder,
+  getOrder,
+  type SalesOrderDetail,
+  type SalesOrderLine,
+} from '@/lib/sales/api-client';
 
 function formatMoney(value: string): string {
   const n = Number(value);
@@ -42,10 +51,12 @@ const lineColumns: Array<DataTableColumn<SalesOrderLine>> = [
 ];
 
 function OrderDetail({ id }: { id: string }) {
-  const { getAccessToken } = useAuth();
+  const { getAccessToken, hasPermission } = useAuth();
   const [order, setOrder] = useState<SalesOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionPending, setActionPending] = useState<'confirm' | 'fulfill' | 'cancel' | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +69,34 @@ function OrderDetail({ id }: { id: string }) {
       setLoading(false);
     }
   }, [getAccessToken, id]);
+
+  // Live status refresh: if this order is confirmed/fulfilled/cancelled from
+  // another tab (or a workflow automation), reflect it here without a manual
+  // reload — same real-time channel the Inventory stock page uses.
+  useDomainEvents(
+    useCallback(
+      (event) => {
+        const payload = event.payload as { orderId?: unknown } | null;
+        if (payload?.orderId === id) void load();
+      },
+      [id, load],
+    ),
+  );
+
+  const canTransition = hasPermission(PERMISSIONS.SALES_ORDER_UPDATE);
+
+  async function runAction(action: 'confirm' | 'fulfill' | 'cancel') {
+    setActionError(null);
+    setActionPending(action);
+    try {
+      const fn = action === 'confirm' ? confirmOrder : action === 'fulfill' ? fulfillOrder : cancelOrder;
+      setOrder(await fn(getAccessToken(), id));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : `Failed to ${action} order`);
+    } finally {
+      setActionPending(null);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -136,10 +175,45 @@ function OrderDetail({ id }: { id: string }) {
         </CardContent>
       </Card>
 
-      {/*
-        No confirm / fulfill / cancel actions here: those status transitions do
-        not exist server-side yet (deliberately a separate integration step).
-      */}
+      {canTransition && order.status !== 'fulfilled' && order.status !== 'cancelled' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {actionError ? (
+              <p className="text-sm font-medium text-destructive" role="alert">
+                {actionError}
+              </p>
+            ) : null}
+            <div className="flex gap-3">
+              {order.status === 'draft' ? (
+                <Button
+                  onClick={() => void runAction('confirm')}
+                  disabled={actionPending !== null}
+                >
+                  {actionPending === 'confirm' ? 'Confirming…' : 'Confirm (reserve stock)'}
+                </Button>
+              ) : null}
+              {order.status === 'confirmed' ? (
+                <Button
+                  onClick={() => void runAction('fulfill')}
+                  disabled={actionPending !== null}
+                >
+                  {actionPending === 'fulfill' ? 'Fulfilling…' : 'Fulfill (deduct stock)'}
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                onClick={() => void runAction('cancel')}
+                disabled={actionPending !== null}
+              >
+                {actionPending === 'cancel' ? 'Cancelling…' : 'Cancel order'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

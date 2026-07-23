@@ -201,6 +201,27 @@ export function createOrder(
   });
 }
 
+/** Reserve stock for every line and transition draft -> confirmed. */
+export function confirmOrder(token: string | null, id: string): Promise<SalesOrderDetail> {
+  return salesFetch<SalesOrderDetail>(`/sales/orders/${id}/confirm`, token, {
+    method: 'POST',
+  });
+}
+
+/** Commit each line's reservation to an actual deduction; confirmed -> fulfilled. */
+export function fulfillOrder(token: string | null, id: string): Promise<SalesOrderDetail> {
+  return salesFetch<SalesOrderDetail>(`/sales/orders/${id}/fulfill`, token, {
+    method: 'POST',
+  });
+}
+
+/** Release any reserved stock (if confirmed) and cancel; draft|confirmed -> cancelled. */
+export function cancelOrder(token: string | null, id: string): Promise<SalesOrderDetail> {
+  return salesFetch<SalesOrderDetail>(`/sales/orders/${id}/cancel`, token, {
+    method: 'POST',
+  });
+}
+
 export function getAvailability(
   token: string | null,
   productId: string,
