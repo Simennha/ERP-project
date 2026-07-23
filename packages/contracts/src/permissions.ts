@@ -31,11 +31,15 @@ export const PERMISSIONS = {
   INVENTORY_STOCK_ADJUST: 'inventory:stock.adjust',
   INVENTORY_WAREHOUSE_MANAGE: 'inventory:warehouse.manage',
 
-  // --- Sales (placeholder resource: order) ----------------------------------
+  // --- Sales (resources: order, customer) -----------------------------------
   SALES_ORDER_READ: 'sales:order.read',
   SALES_ORDER_CREATE: 'sales:order.create',
   SALES_ORDER_UPDATE: 'sales:order.update',
   SALES_ORDER_DELETE: 'sales:order.delete',
+  SALES_CUSTOMER_READ: 'sales:customer.read',
+  SALES_CUSTOMER_CREATE: 'sales:customer.create',
+  SALES_CUSTOMER_UPDATE: 'sales:customer.update',
+  SALES_CUSTOMER_DELETE: 'sales:customer.delete',
 
   // --- Finance (placeholder resource: invoice) ------------------------------
   FINANCE_INVOICE_READ: 'finance:invoice.read',
@@ -120,6 +124,10 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: PERMISSIONS.SALES_ORDER_CREATE, module: 'sales', description: 'Create sales orders' },
   { key: PERMISSIONS.SALES_ORDER_UPDATE, module: 'sales', description: 'Edit sales orders' },
   { key: PERMISSIONS.SALES_ORDER_DELETE, module: 'sales', description: 'Delete sales orders' },
+  { key: PERMISSIONS.SALES_CUSTOMER_READ, module: 'sales', description: 'View customers' },
+  { key: PERMISSIONS.SALES_CUSTOMER_CREATE, module: 'sales', description: 'Create customers' },
+  { key: PERMISSIONS.SALES_CUSTOMER_UPDATE, module: 'sales', description: 'Edit customers' },
+  { key: PERMISSIONS.SALES_CUSTOMER_DELETE, module: 'sales', description: 'Delete customers' },
 
   // Finance
   { key: PERMISSIONS.FINANCE_INVOICE_READ, module: 'finance', description: 'View invoices' },

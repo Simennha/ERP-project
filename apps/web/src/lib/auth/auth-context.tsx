@@ -33,6 +33,12 @@ interface AuthContextValue {
   hasPermission: (key: string) => boolean;
   /** Re-run the refresh-cookie bootstrap (e.g. after a 401). */
   reload: () => Promise<void>;
+  /**
+   * Current in-memory access token (or null when logged out). Read at call time
+   * so it always reflects the latest bootstrap/login. Used by feature API
+   * clients (e.g. lib/sales/api-client) to send `Authorization: Bearer`.
+   */
+  getAccessToken: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -97,9 +103,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [permissions],
   );
 
+  const getAccessToken = useCallback(() => accessTokenRef.current, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, permissions, isLoading, login, logout, hasPermission, reload: bootstrap }),
-    [user, permissions, isLoading, login, logout, hasPermission, bootstrap],
+    () => ({
+      user,
+      permissions,
+      isLoading,
+      login,
+      logout,
+      hasPermission,
+      reload: bootstrap,
+      getAccessToken,
+    }),
+    [user, permissions, isLoading, login, logout, hasPermission, bootstrap, getAccessToken],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

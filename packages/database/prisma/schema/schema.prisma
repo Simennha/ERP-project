@@ -49,6 +49,9 @@ model Company {
   products       Product[]
   stockItems     StockItem[]
   stockMovements StockMovement[]
+  customers      Customer[]
+  salesOrders    SalesOrder[]
+  invoices       Invoice[]
 }
 
 model Department {
@@ -101,6 +104,10 @@ model User {
   productsCreated            Product[]             @relation("ProductCreatedBy")
   productsUpdated            Product[]             @relation("ProductUpdatedBy")
   stockMovementsCreated      StockMovement[]       @relation("StockMovementCreatedBy")
+  customersCreated           Customer[]            @relation("CustomerCreatedBy")
+  customersUpdated           Customer[]            @relation("CustomerUpdatedBy")
+  salesOrdersCreated         SalesOrder[]          @relation("SalesOrderCreatedBy")
+  salesOrdersUpdated         SalesOrder[]          @relation("SalesOrderUpdatedBy")
 
   @@unique([companyId, email])
   @@index([companyId])
