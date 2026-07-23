@@ -1,80 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-
-export interface DashboardSummaryDto {
-  lowStockCount: number;
-  totalInventoryValue: string;
-  openOrdersCount: number;
-  salesThisMonth: string;
-}
+import type { DashboardSummaryDto } from '@erp/contracts';
+import { DashboardWidgetRegistry } from '../core/dashboard-widgets';
 
 /**
- * First real dashboard data: a handful of company-scoped KPIs pulled from
- * Inventory and Sales, proving the "single source of truth" value
- * proposition (numbers here are the same live data the Inventory/Sales list
- * pages show, not a separate reporting copy).
+ * Aggregates whatever every registered {@link DashboardWidgetProvider} has to
+ * contribute for a company. This module deliberately knows nothing about
+ * Inventory, Sales, or any other feature module — see
+ * core/dashboard-widgets for the registry that makes that possible, and
+ * inventory/inventory-dashboard-widgets.provider.ts /
+ * sales/sales-dashboard-widgets.provider.ts for the two current contributors.
  *
- * This is a deliberately small starting point, NOT the full widget-registry
- * framework described in the project plan (each module contributing its own
- * auto-discovered widgets.ts) - that's still a TODO, left for the next
- * session (see README "Suggested next phases"). Low-stock counting and
- * inventory valuation are computed in memory over the company's stock rows
- * (same bounded-catalog assumption as StockReadService.list) rather than via
- * a SQL aggregate, since `available` is a computed, not stored, column.
+ * Widgets a user's role can't act on are still returned here (not filtered by
+ * `requiredPermission` server-side) and hidden on the frontend instead — the
+ * previous single-query version of this endpoint made the same call
+ * explicitly ("every logged-in user sees the top-level KPIs; the drill-down
+ * list pages they link to already enforce the real per-module permissions"),
+ * and that reasoning still holds: an aggregate count is low-sensitivity, and
+ * the real access control is unchanged at the list-page APIs the widgets link
+ * to.
  */
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly registry: DashboardWidgetRegistry) {}
 
   async getSummary(companyId: string): Promise<DashboardSummaryDto> {
-    const [stockItems, openOrdersCount, ordersThisMonth] = await Promise.all([
-      this.prisma.stockItem.findMany({
-        where: { companyId },
-        select: {
-          quantityOnHand: true,
-          quantityReserved: true,
-          reorderPoint: true,
-          product: { select: { costPrice: true } },
-        },
-      }),
-      this.prisma.salesOrder.count({
-        where: { companyId, status: 'confirmed' },
-      }),
-      this.prisma.salesOrder.findMany({
-        where: {
-          companyId,
-          status: { not: 'cancelled' },
-          orderDate: { gte: startOfMonth() },
-        },
-        select: { totalAmount: true },
-      }),
-    ]);
-
-    let lowStockCount = 0;
-    let totalInventoryValue = 0;
-    for (const item of stockItems) {
-      const available = item.quantityOnHand - item.quantityReserved;
-      if (item.reorderPoint > 0 && available <= item.reorderPoint) {
-        lowStockCount += 1;
-      }
-      totalInventoryValue += item.quantityOnHand * Number(item.product.costPrice);
-    }
-
-    const salesThisMonth = ordersThisMonth.reduce(
-      (sum, order) => sum + Number(order.totalAmount),
-      0,
-    );
-
-    return {
-      lowStockCount,
-      totalInventoryValue: totalInventoryValue.toFixed(2),
-      openOrdersCount,
-      salesThisMonth: salesThisMonth.toFixed(2),
-    };
+    return { widgets: await this.registry.collectAll(companyId) };
   }
-}
-
-function startOfMonth(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1);
 }

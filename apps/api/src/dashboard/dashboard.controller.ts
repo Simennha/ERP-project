@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
+import type { DashboardSummaryDto } from '@erp/contracts';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
-import { DashboardService, type DashboardSummaryDto } from './dashboard.service';
+import { DashboardService } from './dashboard.service';
 
 /**
  * Dashboard summary. Just authenticated (global JwtAuthGuard), no extra

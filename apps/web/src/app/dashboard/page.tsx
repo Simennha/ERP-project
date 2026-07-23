@@ -3,39 +3,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, CardHeader, CardTitle, KpiCard, buttonVariants } from '@erp/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useDomainEvents } from '@/lib/realtime/use-domain-events';
-import { API_BASE_URL } from '@/lib/auth/api-client';
-
-interface DashboardSummary {
-  lowStockCount: number;
-  totalInventoryValue: string;
-  openOrdersCount: number;
-  salesThisMonth: string;
-}
-
-function formatMoney(value: string): string {
-  const n = Number(value);
-  return Number.isFinite(n)
-    ? n.toLocaleString(undefined, { style: 'currency', currency: 'USD' })
-    : value;
-}
+import { getDashboardSummary, type DashboardWidget } from '@/lib/dashboard/api';
+import { WIDGET_RENDERERS } from '@/lib/dashboard/widget-registry';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, permissions, isLoading, logout, getAccessToken } = useAuth();
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const { user, permissions, isLoading, logout, getAccessToken, hasPermission } = useAuth();
+  const [widgets, setWidgets] = useState<DashboardWidget[] | null>(null);
 
   const loadSummary = useCallback(async () => {
     const token = getAccessToken();
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/dashboard/summary`, {
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setSummary((await res.json()) as DashboardSummary);
+      const summary = await getDashboardSummary(token);
+      setWidgets(summary.widgets);
     } catch {
       // Best-effort: the account/permissions cards below still render fine
       // without KPIs, so a failed summary fetch isn't a page-level error.
@@ -91,36 +75,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {summary ? (
+      {widgets ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Link href="/inventory/stock?lowStock=true">
-            <KpiCard
-              title="Low stock items"
-              value={summary.lowStockCount}
-              hint="click to view"
-            />
-          </Link>
-          <Link href="/inventory/stock">
-            <KpiCard
-              title="Inventory value"
-              value={formatMoney(summary.totalInventoryValue)}
-              hint="on-hand x cost, click to view"
-            />
-          </Link>
-          <Link href="/sales/orders?status=confirmed">
-            <KpiCard
-              title="Orders pending fulfillment"
-              value={summary.openOrdersCount}
-              hint="click to view"
-            />
-          </Link>
-          <Link href="/sales/orders">
-            <KpiCard
-              title="Sales this month"
-              value={formatMoney(summary.salesThisMonth)}
-              hint="click to view"
-            />
-          </Link>
+          {widgets
+            .filter((widget) => !widget.requiredPermission || hasPermission(widget.requiredPermission))
+            .map((widget) => {
+              const Renderer = WIDGET_RENDERERS[widget.kind];
+              return Renderer ? <Renderer key={widget.id} widget={widget} /> : null;
+            })}
         </div>
       ) : null}
 

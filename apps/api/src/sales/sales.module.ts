@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '../prisma/prisma.module';
 import { EventBusModule } from '../core/event-bus/event-bus.module';
+import { DashboardWidgetsModule } from '../core/dashboard-widgets';
 import { InventoryModule } from '../inventory/inventory.module';
 import { CustomersController } from './customers.controller';
 import { CustomersService } from './customers.service';
 import { SalesOrdersController } from './sales-orders.controller';
 import { SalesOrdersService } from './sales-orders.service';
+import { SalesDashboardWidgetsProvider } from './sales-dashboard-widgets.provider';
 
 /**
  * Sales module — Customer + SalesOrder CRUD (Phase 3).
@@ -20,9 +22,9 @@ import { SalesOrdersService } from './sales-orders.service';
  *   follow-up step. InventoryModule itself is untouched.
  */
 @Module({
-  imports: [PrismaModule, EventBusModule, InventoryModule],
+  imports: [PrismaModule, EventBusModule, InventoryModule, DashboardWidgetsModule],
   controllers: [CustomersController, SalesOrdersController],
-  providers: [CustomersService, SalesOrdersService],
+  providers: [CustomersService, SalesOrdersService, SalesDashboardWidgetsProvider],
   exports: [CustomersService, SalesOrdersService],
 })
 export class SalesModule {}

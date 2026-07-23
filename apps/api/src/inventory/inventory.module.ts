@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EventBusModule } from '../core/event-bus/event-bus.module';
+import { DashboardWidgetsModule } from '../core/dashboard-widgets';
 import { StockService } from './stock.service';
 import { StockReadService } from './stock-read.service';
 import { ProductsService } from './products.service';
@@ -8,6 +9,7 @@ import { WarehousesService } from './warehouses.service';
 import { ProductsController } from './products.controller';
 import { WarehousesController } from './warehouses.controller';
 import { StockController } from './stock.controller';
+import { InventoryDashboardWidgetsProvider } from './inventory-dashboard-widgets.provider';
 
 /**
  * Inventory module.
@@ -22,9 +24,15 @@ import { StockController } from './stock.controller';
  *    where adjust delegates to StockService.adjust() — no new mutation path.
  */
 @Module({
-  imports: [PrismaModule, EventBusModule],
+  imports: [PrismaModule, EventBusModule, DashboardWidgetsModule],
   controllers: [ProductsController, WarehousesController, StockController],
-  providers: [StockService, StockReadService, ProductsService, WarehousesService],
+  providers: [
+    StockService,
+    StockReadService,
+    ProductsService,
+    WarehousesService,
+    InventoryDashboardWidgetsProvider,
+  ],
   exports: [StockService],
 })
 export class InventoryModule {}

@@ -5,3 +5,4 @@ export * from './common/pagination';
 export * from './workflow';
 export * from './notifications';
 export * from './audit';
+export * from './dashboard';

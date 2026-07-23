@@ -2,11 +2,11 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PERMISSIONS } from '@erp/contracts';
 import { Button, DataTable, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useDomainEvents } from '@/lib/realtime/use-domain-events';
+import { useTableFilters } from '@/lib/hooks/use-table-filters';
 import {
   listStock,
   listWarehouses,
@@ -19,33 +19,28 @@ import { AdjustDialog } from './adjust-dialog';
 const PAGE_SIZE = 25;
 
 function StockContent() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { getAccessToken, hasPermission } = useAuth();
 
   const canAdjust = hasPermission(PERMISSIONS.INVENTORY_STOCK_ADJUST);
   const canListWarehouses = hasPermission(PERMISSIONS.INVENTORY_WAREHOUSE_MANAGE);
 
-  // Filters come straight from the URL query string (?warehouseId=&lowStock=).
-  // No shared useTableFilters hook exists yet — reading useSearchParams directly
-  // here is deliberate (see report). A real hook should be extracted in the
-  // dashboard phase once more pages share this pattern.
-  const warehouseId = searchParams.get('warehouseId') ?? '';
-  const lowStockParam = searchParams.get('lowStock');
-  const lowStock = lowStockParam === 'true' || lowStockParam === '1';
+  // Explicit type argument: without it, TS infers `lowStock`'s type as the
+  // literal `false` (not `boolean`) from the object literal below, which then
+  // rejects `setFilter('lowStock', !lowStock)` since `!lowStock` is `boolean`.
+  const { filters, setFilter, clearFilters, hasActiveFilters, page, setPage } = useTableFilters<{
+    warehouseId: string;
+    lowStock: boolean;
+  }>({
+    warehouseId: '',
+    lowStock: false,
+  });
+  const { warehouseId, lowStock } = filters;
 
   const [result, setResult] = useState<Paginated<StockItemDto> | null>(null);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adjustTarget, setAdjustTarget] = useState<StockItemDto | null>(null);
-
-  // Reset to the first page whenever the filters change.
-  useEffect(() => {
-    setPage(1);
-  }, [warehouseId, lowStock]);
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
@@ -105,20 +100,6 @@ function StockContent() {
       cancelled = true;
     };
   }, [getAccessToken, canListWarehouses]);
-
-  function updateQuery(next: { warehouseId?: string | null; lowStock?: boolean }) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next.warehouseId !== undefined) {
-      if (next.warehouseId) params.set('warehouseId', next.warehouseId);
-      else params.delete('warehouseId');
-    }
-    if (next.lowStock !== undefined) {
-      if (next.lowStock) params.set('lowStock', 'true');
-      else params.delete('lowStock');
-    }
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-  }
 
   const columns: Array<DataTableColumn<StockItemDto>> = [
     {
@@ -216,7 +197,7 @@ function StockContent() {
         {warehouses.length > 0 ? (
           <select
             value={warehouseId}
-            onChange={(e) => updateQuery({ warehouseId: e.target.value || null })}
+            onChange={(e) => setFilter('warehouseId', e.target.value || null)}
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             aria-label="Filter by warehouse"
           >
@@ -236,17 +217,13 @@ function StockContent() {
         <Button
           variant={lowStock ? 'default' : 'outline'}
           size="sm"
-          onClick={() => updateQuery({ lowStock: !lowStock })}
+          onClick={() => setFilter('lowStock', !lowStock)}
         >
           {lowStock ? 'Showing low stock only' : 'Show low stock only'}
         </Button>
 
-        {(warehouseId || lowStock) && warehouses.length === 0 ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(pathname)}
-          >
+        {hasActiveFilters && warehouses.length === 0 ? (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
             Clear filters
           </Button>
         ) : null}
