@@ -155,6 +155,17 @@ export class ProductsService {
 
   async remove(companyId: string, id: string): Promise<void> {
     await this.ensureExists(companyId, id);
+    // A product referenced by any sales order line cannot be hard-deleted (the
+    // FK is onDelete: Restrict, added by the Sales module). Pre-check so the
+    // caller gets a clean 409 instead of a raw FK-violation 500.
+    const lineCount = await this.prisma.salesOrderLine.count({
+      where: { productId: id },
+    });
+    if (lineCount > 0) {
+      throw new ConflictException(
+        `Product ${id} appears on ${lineCount} sales order line(s) and cannot be deleted`,
+      );
+    }
     // Per inventory.prisma, deleting a Product cascades its StockItem and
     // StockMovement rows (onDelete: Cascade). This is a hard delete; callers
     // that want to keep history should set isActive=false via PATCH instead.

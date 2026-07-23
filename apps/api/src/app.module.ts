@@ -12,6 +12,9 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
 import { EventBusModule } from './core/event-bus/event-bus.module';
 import { AuditModule } from './core/audit/audit.module';
 import { NotificationsModule } from './core/notifications/notifications.module';
+import { WorkflowModule } from './core/workflow/workflow.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { SalesModule } from './sales/sales.module';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { NotificationsModule } from './core/notifications/notifications.module';
     EventBusModule,
     AuditModule,
     NotificationsModule,
+    WorkflowModule,
+    InventoryModule,
+    SalesModule,
   ],
   controllers: [AppController],
   providers: [
