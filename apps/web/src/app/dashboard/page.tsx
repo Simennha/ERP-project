@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useDomainEvents } from '@/lib/realtime/use-domain-events';
 import { getDashboardSummary, type DashboardWidget } from '@/lib/dashboard/api';
@@ -11,7 +10,7 @@ import { WIDGET_RENDERERS } from '@/lib/dashboard/widget-registry';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, permissions, isLoading, logout, getAccessToken, hasPermission } = useAuth();
+  const { user, permissions, isLoading, getAccessToken, hasPermission } = useAuth();
   const [widgets, setWidgets] = useState<DashboardWidget[] | null>(null);
 
   const loadSummary = useCallback(async () => {
@@ -57,22 +56,9 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-6 py-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Logged in as {user.name}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/inventory/products" className={buttonVariants({ variant: 'secondary' })}>
-            Inventory
-          </Link>
-          <Link href="/sales/orders" className={buttonVariants({ variant: 'secondary' })}>
-            Sales
-          </Link>
-          <Button variant="outline" onClick={() => void logout()}>
-            Log out
-          </Button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">Logged in as {user.name}</p>
       </div>
 
       {widgets ? (

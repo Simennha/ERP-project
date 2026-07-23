@@ -2,14 +2,14 @@
 
 import type { ReactNode } from 'react';
 import { AuthProvider } from '@/lib/auth/auth-context';
-import { NotificationBell } from './notification-bell';
+import { AppShell } from './app-shell';
 
 /** Client-side providers wrapper mounted once in the root layout. */
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
+      <AppShell />
       {children}
-      <NotificationBell />
     </AuthProvider>
   );
 }

@@ -4,7 +4,6 @@ import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { PERMISSIONS } from '@erp/contracts';
 import { useAuth } from '@/lib/auth/auth-context';
-import { WorkflowsNav } from '@/components/workflows-nav';
 
 /**
  * Section layout for /workflows/*. Unlike Inventory/Sales/etc. (which gate
@@ -13,7 +12,9 @@ import { WorkflowsNav } from '@/components/workflows-nav';
  * `admin:workflow.manage` permission (see workflow.controller.ts's
  * class-level `@RequirePermission`) — there's no separate read key. So this
  * layout redirects away entirely for anyone without it, rather than
- * per-button gating within each page.
+ * per-button gating within each page. No local section nav — Workflows has
+ * exactly one resource, and AppShell's global top nav already links straight
+ * to it.
  */
 export default function WorkflowsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -43,7 +44,6 @@ export default function WorkflowsLayout({ children }: { children: ReactNode }) {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 py-10">
-      <WorkflowsNav />
       {children}
     </main>
   );

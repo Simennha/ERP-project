@@ -21,11 +21,10 @@ function formatRelativeTime(iso: string): string {
 }
 
 /**
- * Global notification bell + dropdown, mounted once from `Providers` so it's
- * available on every page. There is no app shell/header to dock it into yet
- * (see README "Suggested next phases" — a real nav is later scope), so it
- * renders as a small fixed top-right control instead of pretending to be part
- * of one.
+ * Notification bell + dropdown, docked into `AppShell`'s top bar (which
+ * mounts it once, globally, on every authenticated page). Positioned via a
+ * plain `relative` wrapper — the shell controls placement; this component
+ * only anchors its own dropdown.
  */
 export function NotificationBell() {
   const { user, getAccessToken } = useAuth();
@@ -111,7 +110,7 @@ export function NotificationBell() {
   }
 
   return (
-    <div ref={containerRef} className="fixed right-4 top-4 z-50">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         aria-label="Notifications"

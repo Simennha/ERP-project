@@ -3,12 +3,12 @@
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/auth-context';
-import { HrNav } from '@/components/hr-nav';
 
 /**
  * Section layout for /hr/*. Handles the shared "must be signed in" redirect
- * once (matching the dashboard page's pattern) and renders the section nav
- * above every HR page. Per-page permission checks (create/edit/delete) are
+ * once (matching the dashboard page's pattern). No local section nav — HR has
+ * exactly one resource (Employees), and AppShell's global top nav already
+ * links straight to it. Per-page permission checks (create/edit/delete) are
  * still done in each page via `useAuth().hasPermission(...)`.
  */
 export default function HrLayout({ children }: { children: ReactNode }) {
@@ -36,7 +36,6 @@ export default function HrLayout({ children }: { children: ReactNode }) {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 py-10">
-      <HrNav />
       {children}
     </main>
   );

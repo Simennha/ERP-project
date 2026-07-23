@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@erp/ui';
 
 /**
- * Lightweight tab bar shared across the Inventory section pages.
- *
- * There is no global app-shell / sidebar yet (only the root Providers wrapper),
- * so this is a section-scoped nav rather than a premature app-wide navigation
- * system — that belongs to the dashboard phase.
+ * Lightweight sub-tab bar for the Inventory section's own pages
+ * (Products/Warehouses/Stock) — real multi-page navigation within the
+ * module, distinct from top-level module switching (AppShell's global nav
+ * already links to /inventory/products, so no "back to Dashboard" link is
+ * needed here).
  */
 const LINKS = [
   { href: '/inventory/products', label: 'Products' },
@@ -39,12 +39,6 @@ export function InventoryNav() {
           </Link>
         );
       })}
-      <Link
-        href="/dashboard"
-        className="ml-auto rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-      >
-        Dashboard
-      </Link>
     </nav>
   );
 }

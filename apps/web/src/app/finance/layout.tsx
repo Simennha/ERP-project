@@ -3,13 +3,14 @@
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/auth-context';
-import { FinanceNav } from '@/components/finance-nav';
 
 /**
  * Section layout for /finance/*. Handles the shared "must be signed in"
- * redirect once (matching the dashboard page's pattern) and renders the
- * section nav above every finance page. Per-page permission checks (create/
- * update/delete) are still done in each page via `useAuth().hasPermission(...)`.
+ * redirect once (matching the dashboard page's pattern). No local section nav
+ * — Finance has exactly one resource (Invoices), and AppShell's global top nav
+ * already links straight to it, so a single-link local nav would be pure
+ * redundancy. Per-page permission checks (create/update/delete) are still
+ * done in each page via `useAuth().hasPermission(...)`.
  */
 export default function FinanceLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -36,7 +37,6 @@ export default function FinanceLayout({ children }: { children: ReactNode }) {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 py-10">
-      <FinanceNav />
       {children}
     </main>
   );
