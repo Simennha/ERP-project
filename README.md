@@ -19,12 +19,12 @@ built. Read this before touching code.
 | Auth (JWT + refresh cookie), RBAC | Done |
 | Real-time event bus (Socket.io + Redis) | Done |
 | Audit logging (explicit + auto-diff extension) | Done |
-| Notifications (persistence + live push) | Done |
+| Notifications (persistence + live push) | Backend done, **no frontend UI at all** — no bell icon, no notification list page. `NotificationService`/`GET /notifications`/`POST /notifications/:id/read` exist and work; nothing in `apps/web` calls them yet |
 | Workflow/automation engine (json-logic conditions, 5 action types, CRUD API) | Done, **no admin UI yet** (API only) |
 | Inventory (products, warehouses, stock, movements) | Done (backend + UI) |
 | Sales (customers, orders, full draft→confirmed→fulfilled/cancelled lifecycle) | Done (backend + UI), reserves/commits/releases real stock |
 | Finance, HR, Procurement, Projects | **Not started** — permission keys reserved in `packages/contracts/src/permissions.ts`, nothing else |
-| Dashboard framework (KPI widgets, drill-down) | **Not started** — `/dashboard` is just a login-proof page |
+| Dashboard | **Partial** — `GET /dashboard/summary` + 4 real KPI tiles with drill-down links, live-updating (`apps/api/src/dashboard/`, `apps/web/src/app/dashboard/page.tsx`). **Not** the generalized widget-registry framework from the original plan (see "Suggested next phases") — this is 4 hand-written numbers, not a pluggable per-module widget system |
 | Reporting | **Not started** |
 
 If you're picking this up cold: the fastest way to see the system's shape is to
@@ -312,19 +312,66 @@ project as an AI agent: keep that discipline. If you're continuing it as a
 human with a working toolchain: run `pnpm typecheck` immediately and treat
 any error as expected-and-fixable, not a sign something is deeply wrong.
 
-### Suggested next phases (not started)
+## Handoff — read this first if you're the next session
 
-1. **Dashboard framework** — a widget registry (each module contributes
-   `widgets.ts`, auto-discovered rather than one shared array everyone edits),
-   a `/dashboard` layout that renders permitted widgets, and a drill-down
-   convention (widget → filtered list page via query params). This is also
-   where the shared `useTableFilters` hook and a real app shell/nav belong.
-2. **Finance, HR, Procurement, Projects stubs** — permission keys already
+The previous session was stopped by an explicit time-box (the user asked to
+work until a specific time, then write handoff notes), **not** because a
+phase was finished and it was a natural stopping point. Concretely, at
+cutoff:
+
+- Everything described in the status table above as "Done" is genuinely
+  merged to `main` and was carefully hand-reviewed (see "How this was built"
+  below) — safe to build on.
+- The dashboard row ("Partial") was the very last thing touched. It's a
+  complete, working, small vertical slice (real numbers, real drill-down
+  links, live-updating) — not a half-finished framework. Don't treat it as
+  broken; treat it as intentionally minimal.
+- **Nothing was left mid-edit or uncommitted.** Run `git log --oneline -20`
+  and `git status` to confirm before doing anything else — if `git status`
+  isn't clean, something unexpected happened after this README was written
+  and you should investigate before proceeding.
+- No agent worktrees should be left lying around (`.claude/worktrees/` is
+  gitignored and should be empty or absent — if you find stale ones from an
+  interrupted run, check `git worktree list` and clean up with
+  `git worktree remove` before starting new work, per the pattern used
+  throughout this project).
+
+### Suggested next phases, roughly in priority order
+
+1. **Notifications frontend** — the backend is fully built and unused. Add a
+   bell icon + dropdown (or a `/notifications` page) that calls
+   `GET /notifications` and `POST /notifications/:id/read`. This is the
+   highest-value gap: the workflow engine's `notify` action already creates
+   these rows, so there's real data waiting with no UI to see it.
+   **Live-push gotcha to fix first:** `NotificationService.send()`
+   broadcasts via `emitToUser(userId, 'notification.created', dto)` — a RAW
+   socket.io event name carrying a bare `NotificationDto` — which is a
+   *different* channel from `RealtimeGateway`'s `'domain-event'` broadcast
+   that `useDomainEvents()` listens on (see `realtime.gateway.ts`'s
+   `REALTIME_EVENT` constant vs. `notifications.service.ts`'s
+   `NOTIFICATION_CREATED_EVENT`). `useDomainEvents()` as written will
+   **never** see a notification push. Either add a small second hook that
+   listens for a named raw socket event, or (probably cleaner) change
+   notification creation to also flow through `EventBusService.emit()` so
+   there's one real-time channel, not two. Decide and document whichever way
+   you go — right now it's an inconsistency, not a deliberate design.
+2. **Generalize the dashboard into the widget-registry framework** described
+   in the original project plan: each module contributes its own
+   `widgets.ts` (auto-discovered, not one shared array everyone edits), a
+   proper `requiredPermission`-aware widget component registry, and the
+   shared `useTableFilters` hook (extract it now — both `app/inventory/stock`
+   and the dashboard KPI links independently reimplement "read a filter from
+   the URL," which was flagged as a TODO in both places).
+3. **Finance, HR, Procurement, Projects stubs** — permission keys already
    exist in `packages/contracts/src/permissions.ts`; each needs a Nest
    module, 1-2 entities, basic CRUD, a nav entry, and one dashboard widget
    wired to a real query — follow the Inventory/Sales modules as the
    reference shape, and the "additive-only edits to shared files" discipline
    described above.
-3. **Workflow admin UI** — a form-based (not visual-canvas) builder for
+4. **Workflow admin UI** — a form-based (not visual-canvas) builder for
    `WorkflowDefinition`/`WorkflowAction` against the existing `/workflows`
    API.
+5. **A real app shell/nav** — right now each feature module renders its own
+   small section nav (`app/inventory/layout.tsx`, `app/sales/layout.tsx`) and
+   the dashboard links to them ad hoc. A persistent sidebar/top-nav that
+   reflects the user's permissions belongs here.
