@@ -16,6 +16,10 @@ import { WorkflowModule } from './core/workflow/workflow.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { FinanceModule } from './finance/finance.module';
+import { HrModule } from './hr/hr.module';
+import { ProcurementModule } from './procurement/procurement.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -43,6 +47,10 @@ import { DashboardModule } from './dashboard/dashboard.module';
     InventoryModule,
     SalesModule,
     DashboardModule,
+    FinanceModule,
+    HrModule,
+    ProcurementModule,
+    ProjectsModule,
   ],
   controllers: [AppController],
   providers: [

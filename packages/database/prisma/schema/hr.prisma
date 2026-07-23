@@ -1,0 +1,26 @@
+// HR module. Employee is a standalone single-entity stub — no cross-module
+// relations yet (a future phase may link Employee to User for self-service).
+
+model Employee {
+  id               String   @id @default(cuid())
+  companyId        String
+  firstName        String
+  lastName         String
+  email            String
+  jobTitle         String?
+  department       String?
+  // Allowed values: 'active' | 'onLeave' | 'terminated'. Plain String column.
+  employmentStatus String   @default("active")
+  hireDate         DateTime @default(now())
+  createdById      String?
+  updatedById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("EmployeeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("EmployeeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, email])
+  @@index([companyId])
+}

@@ -1,0 +1,25 @@
+// Projects module. Project is a standalone single-entity stub — no
+// cross-module relations yet (a future phase may link time entries or tasks).
+
+model Project {
+  id          String    @id @default(cuid())
+  companyId   String
+  name        String
+  code        String
+  // Allowed values: 'planned' | 'active' | 'onHold' | 'completed' | 'cancelled'. Plain String column.
+  status      String    @default("planned")
+  startDate   DateTime?
+  endDate     DateTime?
+  description String?
+  createdById String?
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("ProjectCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("ProjectUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}

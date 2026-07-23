@@ -1,0 +1,27 @@
+// Procurement module. PurchaseOrder is a standalone single-entity stub — no
+// cross-module relation to Inventory/Product yet (a future phase may add
+// PurchaseOrderLine items tied to Product, mirroring SalesOrderLine).
+
+model PurchaseOrder {
+  id           String    @id @default(cuid())
+  companyId    String
+  poNumber     String
+  vendorName   String
+  // Allowed values: 'draft' | 'submitted' | 'received' | 'cancelled'. Plain String column.
+  status       String    @default("draft")
+  totalAmount  Decimal   @db.Decimal(12, 2)
+  orderDate    DateTime  @default(now())
+  expectedDate DateTime?
+  notes        String?
+  createdById  String?
+  updatedById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("PurchaseOrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("PurchaseOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, poNumber])
+  @@index([companyId])
+}
