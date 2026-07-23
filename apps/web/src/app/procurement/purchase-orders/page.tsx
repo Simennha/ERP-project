@@ -3,25 +3,26 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PERMISSIONS } from '@erp/contracts';
-import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
+import { Button, DataTable, StatusBadge, buttonVariants, type DataTableColumn, type StatusTone } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
-import { listPurchaseOrders, type Paginated, type PurchaseOrderDto } from '@/lib/procurement/api';
+import { listPurchaseOrders, type Paginated, type PurchaseOrderListItemDto } from '@/lib/procurement/api';
 
 const PAGE_SIZE = 25;
 
-const STATUS_STYLES: Record<string, string> = {
-  draft: 'text-muted-foreground',
-  submitted: 'text-blue-600 dark:text-blue-400',
-  received: 'text-emerald-600 dark:text-emerald-400',
-  cancelled: 'text-destructive',
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: 'neutral',
+  submitted: 'info',
+  partiallyReceived: 'warning',
+  received: 'success',
+  cancelled: 'danger',
 };
 
 function PurchaseOrdersContent() {
   const { getAccessToken, hasPermission } = useAuth();
   const canCreate = hasPermission(PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_CREATE);
 
-  const [result, setResult] = useState<Paginated<PurchaseOrderDto> | null>(null);
+  const [result, setResult] = useState<Paginated<PurchaseOrderListItemDto> | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +44,7 @@ function PurchaseOrdersContent() {
     void load();
   }, [load]);
 
-  const columns: Array<DataTableColumn<PurchaseOrderDto>> = [
+  const columns: Array<DataTableColumn<PurchaseOrderListItemDto>> = [
     {
       key: 'poNumber',
       header: 'PO number',
@@ -60,9 +61,7 @@ function PurchaseOrdersContent() {
     {
       key: 'status',
       header: 'Status',
-      cell: (row) => (
-        <span className={STATUS_STYLES[row.status] ?? 'text-foreground'}>{row.status}</span>
-      ),
+      cell: (row) => <StatusBadge label={row.status} tone={STATUS_TONE[row.status] ?? 'neutral'} />,
     },
     {
       key: 'totalAmount',

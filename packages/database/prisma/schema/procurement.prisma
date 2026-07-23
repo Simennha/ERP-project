@@ -1,14 +1,24 @@
-// Procurement module. PurchaseOrder is a standalone single-entity stub — no
-// cross-module relation to Inventory/Product yet (a future phase may add
-// PurchaseOrderLine items tied to Product, mirroring SalesOrderLine).
+// Procurement module. PurchaseOrder now has real PurchaseOrderLine items tied
+// to Product/Warehouse, mirroring SalesOrder/SalesOrderLine — the inbound
+// counterpart to Sales's outbound flow. Receiving a line (partial or full)
+// goes through Inventory's StockService.adjust() exactly like Sales's
+// confirm/fulfill go through reserve()/commitReservation() — see
+// PurchaseOrdersService.receive() and StockService's class docblock.
 
 model PurchaseOrder {
   id           String    @id @default(cuid())
   companyId    String
   poNumber     String
   vendorName   String
-  // Allowed values: 'draft' | 'submitted' | 'received' | 'cancelled'. Plain String column.
+  // Allowed values: 'draft' | 'submitted' | 'partiallyReceived' | 'received' |
+  // 'cancelled'. Plain String column. New POs start 'draft'; lines are only
+  // editable while 'draft'. 'submitted' -> 'partiallyReceived'/'received' via
+  // receive() (partial receipt supported, called possibly more than once
+  // per PO); 'cancelled' only reachable from 'draft'/'submitted' (once any
+  // stock has been received there is nothing clean to roll back).
   status       String    @default("draft")
+  // Computed as the sum of each line's lineTotal at write time (like
+  // SalesOrder.totalAmount) — never accepted directly from the client.
   totalAmount  Decimal   @db.Decimal(12, 2)
   orderDate    DateTime  @default(now())
   expectedDate DateTime?
@@ -18,11 +28,37 @@ model PurchaseOrder {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy User?   @relation("PurchaseOrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy User?   @relation("PurchaseOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  company   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?               @relation("PurchaseOrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?               @relation("PurchaseOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  lines     PurchaseOrderLine[]
 
   @@unique([companyId, poNumber])
   @@index([companyId])
   @@index([companyId, status])
+}
+
+model PurchaseOrderLine {
+  id               String  @id @default(cuid())
+  purchaseOrderId  String
+  productId        String
+  warehouseId      String
+  quantityOrdered  Int
+  // Incremented by PurchaseOrdersService.receive() as goods arrive — can be
+  // less than quantityOrdered (partial receipt) across multiple receive()
+  // calls; never exceeds quantityOrdered (enforced in the service).
+  quantityReceived Int     @default(0)
+  unitCost         Decimal @db.Decimal(12, 2)
+  // Computed as quantityOrdered * unitCost at write time (not a DB generated
+  // column), same convention as SalesOrderLine.lineTotal.
+  lineTotal        Decimal @db.Decimal(12, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  // Restrict: a product/warehouse referenced by a PO line cannot be hard-deleted.
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  warehouse     Warehouse     @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@index([warehouseId])
 }

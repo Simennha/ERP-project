@@ -22,6 +22,8 @@ export interface StockAdjustParams {
   /** Signed change to quantityOnHand. Positive = stock in, negative = stock out/write-off. */
   delta: number;
   reason?: string;
+  referenceType?: string;
+  referenceId?: string;
   actorUserId?: string | null;
 }
 
@@ -234,7 +236,7 @@ export class StockService {
    * the product's first stock entry at this warehouse.
    */
   async adjust(params: StockAdjustParams) {
-    const { companyId, productId, warehouseId, delta, reason, actorUserId } = params;
+    const { companyId, productId, warehouseId, delta, reason, referenceType, referenceId, actorUserId } = params;
     if (delta === 0) {
       throw new Error('adjust: delta must be non-zero');
     }
@@ -267,6 +269,8 @@ export class StockService {
           type: 'adjust',
           quantity: delta,
           reason: reason ?? 'Manual adjustment',
+          referenceType,
+          referenceId,
           createdById: actorUserId ?? undefined,
         },
       });
@@ -274,7 +278,7 @@ export class StockService {
       return stockItem;
     });
 
-    await this.emitStockUpdated(companyId, updated, 'adjust', delta, undefined, undefined, actorUserId);
+    await this.emitStockUpdated(companyId, updated, 'adjust', delta, referenceType, referenceId, actorUserId);
     return updated;
   }
 

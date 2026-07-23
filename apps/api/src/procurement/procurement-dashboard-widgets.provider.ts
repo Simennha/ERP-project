@@ -8,8 +8,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Procurement's contribution to the dashboard: a count of purchase orders
- * currently pending (status = 'submitted', i.e. sent to the vendor but not
- * yet received).
+ * currently pending (sent to the vendor but not yet fully received —
+ * 'submitted' or 'partiallyReceived').
  */
 @Injectable()
 export class ProcurementDashboardWidgetsProvider
@@ -26,7 +26,7 @@ export class ProcurementDashboardWidgetsProvider
 
   async getWidgets(companyId: string): Promise<DashboardWidget[]> {
     const pendingCount = await this.prisma.purchaseOrder.count({
-      where: { companyId, status: 'submitted' },
+      where: { companyId, status: { in: ['submitted', 'partiallyReceived'] } },
     });
 
     return [

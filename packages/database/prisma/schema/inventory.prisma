@@ -21,6 +21,9 @@ model Warehouse {
   updatedBy      User?           @relation("WarehouseUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   stockItems     StockItem[]
   stockMovements StockMovement[]
+  // Back-relation required by PurchaseOrderLine.warehouse (procurement.prisma).
+  // Additive only — added by the Procurement workstream.
+  purchaseOrderLines PurchaseOrderLine[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -51,6 +54,8 @@ model Product {
   // Back-relation required by SalesOrderLine.product (sales.prisma). Additive
   // only — added by the Sales workstream; nothing else in this file changed.
   salesOrderLines SalesOrderLine[]
+  // Back-relation required by PurchaseOrderLine.product (procurement.prisma).
+  purchaseOrderLines PurchaseOrderLine[]
 
   @@unique([companyId, sku])
   @@index([companyId])

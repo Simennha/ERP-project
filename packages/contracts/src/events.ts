@@ -28,6 +28,15 @@ export const EVENTS = {
   SALES_ORDER_CONFIRMED: 'sales.order.confirmed',
   SALES_ORDER_FULFILLED: 'sales.order.fulfilled',
   SALES_ORDER_CANCELLED: 'sales.order.cancelled',
+
+  // Procurement — the inbound mirror of Sales. PARTIALLY_RECEIVED fires on a
+  // receive() call that doesn't finish every line; RECEIVED fires once every
+  // line's quantityReceived reaches its quantityOrdered.
+  PROCUREMENT_PURCHASE_ORDER_CREATED: 'procurement.purchaseOrder.created',
+  PROCUREMENT_PURCHASE_ORDER_SUBMITTED: 'procurement.purchaseOrder.submitted',
+  PROCUREMENT_PURCHASE_ORDER_PARTIALLY_RECEIVED: 'procurement.purchaseOrder.partiallyReceived',
+  PROCUREMENT_PURCHASE_ORDER_RECEIVED: 'procurement.purchaseOrder.received',
+  PROCUREMENT_PURCHASE_ORDER_CANCELLED: 'procurement.purchaseOrder.cancelled',
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
@@ -83,6 +92,14 @@ export interface SalesOrderEventPayload {
   totalAmount: string;
 }
 
+export interface PurchaseOrderEventPayload {
+  purchaseOrderId: string;
+  poNumber: string;
+  vendorName: string;
+  status: 'draft' | 'submitted' | 'partiallyReceived' | 'received' | 'cancelled';
+  totalAmount: string;
+}
+
 export interface RolePermissionsUpdatedPayload {
   roleId: string;
   permissionKeys: string[];
@@ -104,4 +121,9 @@ export interface EventPayloadMap {
   [EVENTS.SALES_ORDER_CONFIRMED]: SalesOrderEventPayload;
   [EVENTS.SALES_ORDER_FULFILLED]: SalesOrderEventPayload;
   [EVENTS.SALES_ORDER_CANCELLED]: SalesOrderEventPayload;
+  [EVENTS.PROCUREMENT_PURCHASE_ORDER_CREATED]: PurchaseOrderEventPayload;
+  [EVENTS.PROCUREMENT_PURCHASE_ORDER_SUBMITTED]: PurchaseOrderEventPayload;
+  [EVENTS.PROCUREMENT_PURCHASE_ORDER_PARTIALLY_RECEIVED]: PurchaseOrderEventPayload;
+  [EVENTS.PROCUREMENT_PURCHASE_ORDER_RECEIVED]: PurchaseOrderEventPayload;
+  [EVENTS.PROCUREMENT_PURCHASE_ORDER_CANCELLED]: PurchaseOrderEventPayload;
 }

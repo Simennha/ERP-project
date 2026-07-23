@@ -16,21 +16,33 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
-import { PurchaseOrdersService, type PurchaseOrderDto } from './purchase-orders.service';
+import {
+  PurchaseOrdersService,
+  type PurchaseOrderDto,
+  type PurchaseOrderListItemDto,
+} from './purchase-orders.service';
 import {
   createPurchaseOrderSchema,
   purchaseOrderListQuerySchema,
+  receivePurchaseOrderSchema,
   updatePurchaseOrderSchema,
   type CreatePurchaseOrderInput,
   type PurchaseOrderListQuery,
+  type ReceivePurchaseOrderInput,
   type UpdatePurchaseOrderInput,
 } from './procurement.schemas';
 
 /**
- * PurchaseOrder CRUD API. Authentication is enforced globally by JwtAuthGuard;
- * each route additionally declares the procurement permission it needs via
- * `@RequirePermission` (enforced by the global PermissionsGuard). Results are
- * scoped to the caller's company inside PurchaseOrdersService.
+ * PurchaseOrder CRUD + status-transition actions API. Authentication is
+ * enforced globally by JwtAuthGuard; each route additionally declares the
+ * procurement permission it needs via `@RequirePermission` (enforced by the
+ * global PermissionsGuard). Results are scoped to the caller's company inside
+ * PurchaseOrdersService.
+ *
+ * submit/receive/cancel are the integration point with Inventory: receive()
+ * calls through to PurchaseOrdersService, which in turn calls
+ * StockService.adjust() — see purchase-orders.service.ts for the full
+ * write-up (the inbound mirror of SalesOrdersController's confirm/fulfill/cancel).
  */
 @Controller('procurement/purchase-orders')
 export class PurchaseOrdersController {
@@ -41,7 +53,7 @@ export class PurchaseOrdersController {
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(purchaseOrderListQuerySchema)) query: PurchaseOrderListQuery,
-  ): Promise<Paginated<PurchaseOrderDto>> {
+  ): Promise<Paginated<PurchaseOrderListItemDto>> {
     return this.purchaseOrders.list(user.companyId, query);
   }
 
@@ -81,5 +93,36 @@ export class PurchaseOrdersController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.purchaseOrders.remove(user.companyId, id);
+  }
+
+  /** Send a draft PO to the vendor: draft -> submitted. */
+  @Post(':id/submit')
+  @RequirePermission(PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_UPDATE)
+  submit(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<PurchaseOrderDto> {
+    return this.purchaseOrders.submit(user.companyId, user.userId, id);
+  }
+
+  /** Receive goods against one or more lines (partial or full); adjusts real stock. */
+  @Post(':id/receive')
+  @RequirePermission(PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_UPDATE)
+  receive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(receivePurchaseOrderSchema)) body: ReceivePurchaseOrderInput,
+  ): Promise<PurchaseOrderDto> {
+    return this.purchaseOrders.receive(user.companyId, user.userId, id, body);
+  }
+
+  /** Cancel a draft or submitted PO; not reachable once any goods have been received. */
+  @Post(':id/cancel')
+  @RequirePermission(PERMISSIONS.PROCUREMENT_PURCHASE_ORDER_UPDATE)
+  cancel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<PurchaseOrderDto> {
+    return this.purchaseOrders.cancel(user.companyId, user.userId, id);
   }
 }
