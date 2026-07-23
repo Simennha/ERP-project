@@ -5,6 +5,7 @@ import {
   type WorkflowActionType,
 } from '@erp/contracts';
 
+import { assertPublicHttpUrl } from './ssrf-guard';
 import type { ActionContext, ActionHandler } from './action-handler';
 
 /** Abort the webhook POST if the endpoint hasn't responded in this window. */
@@ -17,6 +18,10 @@ const WEBHOOK_TIMEOUT_MS = 10_000;
  * and `AbortSignal.timeout`). A non-2xx response, a network error, or a timeout
  * all throw; the engine catches that and records the action as failed rather
  * than letting it crash the run.
+ *
+ * SECURITY: `cfg.url` comes from admin-supplied config — see ssrf-guard.ts for
+ * why the target is resolved and checked against private/reserved IP ranges
+ * before the request is made.
  */
 @Injectable()
 export class CallWebhookActionHandler implements ActionHandler {
@@ -24,6 +29,7 @@ export class CallWebhookActionHandler implements ActionHandler {
 
   async execute(config: unknown, context: ActionContext): Promise<void> {
     const cfg = config as CallWebhookActionConfig;
+    await assertPublicHttpUrl(cfg.url);
 
     const response = await fetch(cfg.url, {
       method: 'POST',

@@ -25,7 +25,7 @@ const priceSchema = z
 
 const purchaseOrderStatusSchema = z.enum(['draft', 'submitted', 'received', 'cancelled']);
 
-export const createPurchaseOrderSchema = z.object({
+const purchaseOrderFieldsSchema = z.object({
   poNumber: z.string().trim().min(1).max(64),
   vendorName: z.string().trim().min(1).max(200),
   status: purchaseOrderStatusSchema.optional(),
@@ -35,8 +35,21 @@ export const createPurchaseOrderSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
+// Reject an expectedDate before orderDate when both are present. Duplicated
+// (not a shared generic helper) — a generic constraint tight enough to
+// type-check `.refine()`'s callback ends up narrowing the inferred output to
+// just {orderDate, expectedDate}, breaking every other field's type on the
+// resulting schema.
+export const createPurchaseOrderSchema = purchaseOrderFieldsSchema.refine(
+  (v) => !v.orderDate || !v.expectedDate || v.expectedDate >= v.orderDate,
+  { message: 'expectedDate cannot be before orderDate', path: ['expectedDate'] },
+);
+
 /** PATCH body: every field optional (partial update). */
-export const updatePurchaseOrderSchema = createPurchaseOrderSchema.partial();
+export const updatePurchaseOrderSchema = purchaseOrderFieldsSchema.partial().refine(
+  (v) => !v.orderDate || !v.expectedDate || v.expectedDate >= v.orderDate,
+  { message: 'expectedDate cannot be before orderDate', path: ['expectedDate'] },
+);
 
 export const purchaseOrderListQuerySchema = paginationQuerySchema.extend({
   status: purchaseOrderStatusSchema.optional(),

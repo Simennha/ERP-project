@@ -24,4 +24,5 @@ model PurchaseOrder {
 
   @@unique([companyId, poNumber])
   @@index([companyId])
+  @@index([companyId, status])
 }

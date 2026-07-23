@@ -8,12 +8,18 @@ import { paginationQuerySchema } from '@erp/contracts';
  * never accepted from the client — they are always recomputed server-side.
  */
 
+// unitPrice maps to the same Decimal @db.Decimal(12,2) column type every
+// other money field does — cap it the same way inventory.schemas.ts /
+// procurement.schemas.ts do, so an out-of-range value is a clean 400 rather
+// than a database write error.
+const MAX_DECIMAL_12_2 = 9_999_999_999.99;
+
 /** One order line as submitted by the client. */
 export const salesOrderLineSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().int().positive(),
   /** Editable unit price (frontend pre-fills from the product's salePrice). */
-  unitPrice: z.number().nonnegative().finite(),
+  unitPrice: z.number().nonnegative().finite().max(MAX_DECIMAL_12_2),
 });
 
 export const createSalesOrderSchema = z.object({

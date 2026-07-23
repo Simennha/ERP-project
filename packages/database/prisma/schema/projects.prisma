@@ -22,4 +22,5 @@ model Project {
 
   @@unique([companyId, code])
   @@index([companyId])
+  @@index([companyId, status])
 }

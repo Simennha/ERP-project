@@ -12,8 +12,19 @@ export class UsersService {
   }
 
   /**
-   * Find a user by email. Email is unique per company; this single-company
-   * install resolves the first match, which is sufficient for login.
+   * Find a user by email — used by login, where the caller has nothing to
+   * scope by yet (that's the whole problem login solves).
+   *
+   * `User.email` is unique only PER COMPANY (`@@unique([companyId, email])`
+   * in schema.prisma), not globally. This resolves the first match across
+   * ALL companies, which is only safe because there is currently no way to
+   * create a second `Company` anywhere in this codebase (no signup flow —
+   * every company today is the one row `prisma/seed.ts` creates). If that
+   * ever changes, this becomes a real bug: two companies with a same-email
+   * user would make login resolve to whichever one happens to match first,
+   * not necessarily the one the caller meant. Before adding any company
+   * signup/onboarding flow, revisit this — e.g. require the login form to
+   * disambiguate by company (subdomain/slug) rather than email alone.
    */
   findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findFirst({ where: { email } });
