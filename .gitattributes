@@ -1,0 +1,9 @@
+# Normalize line endings to LF across platforms to avoid CRLF churn/warnings
+# and keep shell scripts and config files POSIX-friendly.
+* text=auto eol=lf
+
+# Binary/lockfiles: let Git detect, don't try to normalize
+pnpm-lock.yaml -text
+*.png binary
+*.jpg binary
+*.ico binary

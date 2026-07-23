@@ -1,0 +1,167 @@
+// ERP system — foundation schema (Phase 1).
+//
+// Conventions:
+// - Every business/foundation table has: id (cuid), createdAt, updatedAt, and
+//   (except Company/Permission) a companyId FK for the single-company install.
+// - createdById / updatedById (nullable FK to User) are added where an audit
+//   trail of authorship makes sense (Department, Role). They are intentionally
+//   omitted on Company/User to avoid circular bootstrap issues, and on the
+//   global Permission registry and the join tables.
+// - AuditLog is append-only (no updatedAt).
+//
+// Client is generated to the default location (node_modules/.prisma/client)
+// and re-exported through @erp/database (see ../src/index.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  legalName    String?
+  settingsJson Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  departments Department[]
+  users       User[]
+  roles       Role[]
+  auditLogs   AuditLog[]
+}
+
+model Department {
+  id                 String   @id @default(cuid())
+  companyId          String
+  name               String
+  parentDepartmentId String?
+  createdById        String?
+  updatedById        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id], onDelete: SetNull)
+  children  Department[] @relation("DepartmentHierarchy")
+  users     User[]
+  createdBy User?        @relation("DepartmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?        @relation("DepartmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([parentDepartmentId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String
+  email        String
+  passwordHash String
+  name         String
+  departmentId String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  userRoles  UserRole[]
+  auditLogs  AuditLog[]
+
+  // Back-relations for authorship FKs on other models.
+  departmentsCreated Department[] @relation("DepartmentCreatedBy")
+  departmentsUpdated Department[] @relation("DepartmentUpdatedBy")
+  rolesCreated       Role[]       @relation("RoleCreatedBy")
+  rolesUpdated       Role[]       @relation("RoleUpdatedBy")
+
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@index([email])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+  createdBy       User?            @relation("RoleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy       User?            @relation("RoleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+// Global permission registry (NOT company-scoped). Seeded from
+// @erp/contracts PERMISSION_DEFINITIONS.
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  module      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+}
+
+// Append-only audit trail.
+model AuditLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String
+  changesJson Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}

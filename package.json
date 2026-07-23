@@ -1,0 +1,29 @@
+{
+  "name": "erp-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Custom single-company ERP platform (monorepo root).",
+  "packageManager": "pnpm@9.5.0",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "pnpm --filter @erp/database db:migrate",
+    "db:seed": "pnpm --filter @erp/database db:seed",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.2",
+    "rimraf": "^5.0.7",
+    "turbo": "^2.0.6",
+    "typescript": "^5.4.5"
+  }
+}
