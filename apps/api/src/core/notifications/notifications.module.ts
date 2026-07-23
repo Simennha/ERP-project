@@ -1,45 +1,28 @@
 import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '../../prisma/prisma.module';
+import { EventBusModule } from '../event-bus/event-bus.module';
 import { NotificationsController } from './notifications.controller';
 import { NotificationService } from './notifications.service';
-import {
-  NoopRealtimeBroadcaster,
-  REALTIME_BROADCASTER,
-} from './realtime-broadcaster';
+import { REALTIME_BROADCASTER } from './realtime-broadcaster';
+import { SocketIoRealtimeBroadcaster } from './socket-io-realtime.broadcaster';
 
 /**
  * Notifications module.
  *
- * Standalone by design: ships with the {@link NoopRealtimeBroadcaster} bound to
- * {@link REALTIME_BROADCASTER}, so persistence + REST work with no dependency on
- * the (parallel-built) event-bus / Socket.io gateway.
- *
- * Exports `NotificationService` so later phases (e.g. the workflow engine's
- * `notify` action) can inject it directly, and re-exports `REALTIME_BROADCASTER`
- * so the binding can be overridden from the composition root once the real
- * gateway exists.
- *
- * ---------------------------------------------------------------------------
- * LATER (orchestrator, once `apps/api/src/core/event-bus` lands) — swap the
- * broadcaster provider for the real one, e.g.:
- *
- *   providers: [
- *     NotificationService,
- *     { provide: REALTIME_BROADCASTER, useClass: SocketIoRealtimeBroadcaster },
- *   ],
- *   imports: [PrismaModule, EventBusModule],
- *
- * No change to NotificationService is required — it depends only on the
- * RealtimeBroadcaster abstraction.
- * ---------------------------------------------------------------------------
+ * `REALTIME_BROADCASTER` is bound to {@link SocketIoRealtimeBroadcaster}, which
+ * delegates to the real-time gateway's per-user room (see
+ * `core/event-bus/realtime.gateway.ts`). NotificationService itself only
+ * depends on the `RealtimeBroadcaster` abstraction — swapping this binding
+ * back to `NoopRealtimeBroadcaster` (still exported from `./realtime-broadcaster`)
+ * would make the module standalone again with no other code changes.
  */
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, EventBusModule],
   controllers: [NotificationsController],
   providers: [
     NotificationService,
-    { provide: REALTIME_BROADCASTER, useClass: NoopRealtimeBroadcaster },
+    { provide: REALTIME_BROADCASTER, useClass: SocketIoRealtimeBroadcaster },
   ],
   exports: [NotificationService, REALTIME_BROADCASTER],
 })

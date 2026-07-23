@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ClsModule } from 'nestjs-cls';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -8,6 +9,9 @@ import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { EventBusModule } from './core/event-bus/event-bus.module';
+import { AuditModule } from './core/audit/audit.module';
+import { NotificationsModule } from './core/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -22,9 +26,15 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
       global: true,
       middleware: { mount: true },
     }),
+    // Global EventEmitter2 instance backing the event bus (core/event-bus).
+    // Wildcard mode is required for RealtimeGateway's `@OnEvent('**')` catch-all.
+    EventEmitterModule.forRoot({ wildcard: true, delimiter: '.' }),
     PrismaModule,
     UsersModule,
     AuthModule,
+    EventBusModule,
+    AuditModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
