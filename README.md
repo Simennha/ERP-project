@@ -31,7 +31,7 @@ hand-review discipline described in "How this was built" below (the machine
 this project was originally built on had none of those installed).
 
 If you already know exactly what you want next (e.g. "add a test suite" or
-"scope out the Reporting module"), just say that directly — the session will
+"build the Users/Roles admin UI"), just say that directly — the session will
 still benefit from reading this file first, but you don't need the generic
 prompt above.
 
@@ -52,7 +52,7 @@ prompt above.
 | Dashboard | Done — generalized widget-registry framework (`apps/api/src/core/dashboard-widgets/`, `apps/web/src/lib/dashboard/widget-registry.tsx`). Every module self-registers its own KPI provider; the dashboard page itself knows nothing about Inventory/Sales/Finance/etc. Adding a widget to an existing module needs zero dashboard-code changes |
 | App shell / nav | Done — persistent, permission-aware top nav (`apps/web/src/components/app-shell.tsx`) links to all 8 destinations; module sections that have real sub-pages (Inventory, Sales) keep a local sub-nav, single-resource modules don't |
 | `useTableFilters` hook | Done (`apps/web/src/lib/hooks/use-table-filters.ts`), extracted from `app/inventory/stock/page.tsx`'s original hand-rolled version |
-| Reporting | **Not started** — the one area from the original plan with no permission keys reserved yet and no code |
+| Reporting | Done (backend + UI) — 7 fixed cross-module report types (`packages/contracts/src/reporting.ts`), each a saved config re-run live against current data, CSV export. `/reporting/reports` |
 
 If you're picking this up cold: the fastest way to see the system's shape is to
 read `apps/api/src/sales/sales-orders.service.ts` (`confirm()`/`fulfill()`/
@@ -440,34 +440,57 @@ natural stopping point (list exhausted), not a time-box cutoff:
 
 ### Suggested next phases, roughly in priority order
 
+Since the list above was written, **Reporting** shipped (7 cross-module
+report types, CSV export — see the status table) and a fresh-eyes security
+audit (a background agent with no memory of the building session, briefed to
+find problems and report back, not fix them) surfaced 15 real findings —
+everything critical/high/medium severity is fixed (see git log around "Fix
+critical/high findings from a fresh-eyes security audit" and "Fix medium/low
+findings..."), including a real vulnerability: workflow `updateField`/
+`createRecord` allowed writing to *any* Prisma model/field by string
+(gated only by `admin:workflow.manage`), which could have overwritten
+`User.passwordHash` or created rows in another company. Now scoped to a
+business-domain model allowlist + field denylist + forced company-scoping.
+
 1. **Automated tests** — there are currently **zero** automated tests
    anywhere in this repo (`find . -iname "*.spec.ts" -o -iname "*.test.ts"`
-   returns nothing). Every phase so far has been verified by hand (typecheck
-   + lint + a manual/Playwright browser pass) rather than a regression suite.
-   With 8 modules now, that's the biggest structural risk to future changes —
-   a good starting scope: NestJS's built-in Jest setup for the trickiest
-   business logic (`StockService`'s reserve/commit/release, the workflow
-   engine's condition evaluation, `SalesOrdersService.confirm()`'s
-   compensating-release rollback), then expand from there.
-2. **Reporting** — the one area from the original plan with genuinely nothing
-   built yet, not even reserved permission keys in
-   `packages/contracts/src/permissions.ts`. Needs scoping first: what reports,
-   against which modules' data, exported how (the plan's original framing was
-   "executive dashboards with drill-down," which the dashboard widget-registry
-   already partially delivers — worth deciding whether "Reporting" is a
-   distinct module or whether it's actually asking for more dashboard widgets
-   plus an export/print view).
-3. **Procurement line items** — `PurchaseOrder` is currently a single
+   returns nothing). Every phase so far — including the security fixes above —
+   has been verified by hand (typecheck + lint + a real Playwright/curl pass
+   against the running dev server) rather than a regression suite. With 9
+   modules now, that's the biggest structural risk to future changes — a good
+   starting scope: NestJS's built-in Jest setup for the trickiest business
+   logic (`StockService`'s reserve/commit/release — now with row-level
+   locking worth regression-testing under concurrency, not just correctness —
+   the workflow engine's model/field allowlist and condition evaluation,
+   `SalesOrdersService.confirm()`'s compensating-release rollback).
+2. **Procurement line items** — `PurchaseOrder` is currently a single
    `totalAmount` with no `PurchaseOrderLine`/`Product` tie, unlike `SalesOrder`
    (real `SalesOrderLine[]`). A real receiving flow (PO line → Inventory
    `StockService.adjust()`) needs that structure first — flagged in
    `procurement.prisma`'s docblock.
-4. **HR ↔ User linking** — `Employee` is currently standalone with no relation
+3. **HR ↔ User linking** — `Employee` is currently standalone with no relation
    to `User`, so there's no self-service ("my profile," "my time off") story
    yet — flagged in `hr.prisma`'s docblock as the intended growth path.
+4. **Users/Roles admin API + UI** — `admin:users.manage`/`admin:roles.manage`
+   permission keys are reserved and seeded, but there is no way, via the API
+   or UI, to create a second user or role — the "roles are fully
+   admin-creatable" line elsewhere in this file describes the *enforcement*
+   machinery (`PermissionsGuard`, `hasPermission`), not an actual admin
+   surface. Every module built so far has only ever been exercised by a
+   super-user (the seeded Owner) plus one hand-created read-only test role
+   (`packages/database/prisma/create-test-user.ts` — a throwaway dev script,
+   not a real feature). A real admin UI for this is overdue.
 5. **Workflow conditions as a real (optional) visual builder** — currently a
    raw json-logic-js JSON textarea (deliberately, per the original plan's
    "form-based, not visual-canvas" framing). If usage shows admins actually
    struggling with raw JSON, a constrained visual builder for the common
    comparison operators would be the next step — but don't build this
    speculatively; the textarea is a legitimate, shipped v1.
+
+Two low-severity/cosmetic findings from the audit, not worth a dedicated pass
+but easy to fold into other work nearby: `packages/ui`'s `CardDescription`/
+`CardFooter`/`KpiCard`'s `delta` prop are built but never actually used
+anywhere in `apps/web` (dead surface area — either wire one up or drop them);
+`lib/dashboard/widget-registry.tsx`'s money formatting hardcodes `currency:
+'USD'` rather than reading it from `Company.settingsJson`, fine for the
+current single-currency deployment but worth a comment if not fixed outright.
