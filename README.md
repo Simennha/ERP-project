@@ -30,8 +30,8 @@ dev` to verify its own changes as it goes, or whether it's back to the
 hand-review discipline described in "How this was built" below (the machine
 this project was originally built on had none of those installed).
 
-If you already know exactly what you want next (e.g. "build the notifications
-bell" or "start on the HR module"), just say that directly — the session will
+If you already know exactly what you want next (e.g. "add a test suite" or
+"scope out the Reporting module"), just say that directly — the session will
 still benefit from reading this file first, but you don't need the generic
 prompt above.
 
@@ -43,13 +43,16 @@ prompt above.
 | Auth (JWT + refresh cookie), RBAC | Done |
 | Real-time event bus (Socket.io + Redis) | Done |
 | Audit logging (explicit + auto-diff extension) | Done |
-| Notifications (persistence + live push) | Backend done, **no frontend UI at all** — no bell icon, no notification list page. `NotificationService`/`GET /notifications`/`POST /notifications/:id/read` exist and work; nothing in `apps/web` calls them yet |
-| Workflow/automation engine (json-logic conditions, 5 action types, CRUD API) | Done, **no admin UI yet** (API only) |
+| Notifications (persistence + live push) | Done (backend + UI) — bell icon + dropdown in the global app shell, live push via a dedicated socket channel (`apps/web/src/lib/notifications/`, `apps/web/src/components/notification-bell.tsx`) |
+| Workflow/automation engine (json-logic conditions, 5 action types, CRUD API) | Done (backend + UI) — form-based admin builder at `/workflows` (`apps/web/src/app/workflows/`), plus per-workflow run history for debugging |
 | Inventory (products, warehouses, stock, movements) | Done (backend + UI) |
 | Sales (customers, orders, full draft→confirmed→fulfilled/cancelled lifecycle) | Done (backend + UI), reserves/commits/releases real stock |
-| Finance, HR, Procurement, Projects | **Not started** — permission keys reserved in `packages/contracts/src/permissions.ts`, nothing else |
-| Dashboard | **Partial** — `GET /dashboard/summary` + 4 real KPI tiles with drill-down links, live-updating (`apps/api/src/dashboard/`, `apps/web/src/app/dashboard/page.tsx`). **Not** the generalized widget-registry framework from the original plan (see "Suggested next phases") — this is 4 hand-written numbers, not a pluggable per-module widget system |
-| Reporting | **Not started** |
+| Finance (Invoices) | Done (backend + UI) — CRUD against the pre-existing `Invoice` model (1:1 with `SalesOrder`); `SalesOrdersService.confirm()`/`fulfill()` already auto-create/transition these, so the manual "New Invoice" flow is a secondary path for orders that lifecycle hasn't reached yet |
+| HR (Employees), Procurement (Purchase Orders), Projects | Done (backend + UI) — single-entity CRUD stubs, permission-per-action, one dashboard KPI each. Built in parallel by isolated worktree agents, hand-reviewed and integrated (see git log around "Add Finance, HR, Procurement, Projects module stubs") |
+| Dashboard | Done — generalized widget-registry framework (`apps/api/src/core/dashboard-widgets/`, `apps/web/src/lib/dashboard/widget-registry.tsx`). Every module self-registers its own KPI provider; the dashboard page itself knows nothing about Inventory/Sales/Finance/etc. Adding a widget to an existing module needs zero dashboard-code changes |
+| App shell / nav | Done — persistent, permission-aware top nav (`apps/web/src/components/app-shell.tsx`) links to all 8 destinations; module sections that have real sub-pages (Inventory, Sales) keep a local sub-nav, single-resource modules don't |
+| `useTableFilters` hook | Done (`apps/web/src/lib/hooks/use-table-filters.ts`), extracted from `app/inventory/stock/page.tsx`'s original hand-rolled version |
+| Reporting | **Not started** — the one area from the original plan with no permission keys reserved yet and no code |
 
 If you're picking this up cold: the fastest way to see the system's shape is to
 read `apps/api/src/sales/sales-orders.service.ts` (`confirm()`/`fulfill()`/
@@ -84,14 +87,26 @@ apps/
         audit/               AuditService + Prisma extension for auto-diffing tagged models
         notifications/       NotificationService + REALTIME_BROADCASTER abstraction
         workflow/             Automation engine: trigger match -> condition eval -> action handlers
+        dashboard-widgets/    DashboardWidgetRegistry - modules self-register a KPI provider here
       inventory/            Warehouse/Product/StockItem/StockMovement + StockService (see below)
       sales/                Customer/SalesOrder/SalesOrderLine/Invoice + order lifecycle
+      finance/              InvoicesController/Service - CRUD against sales.prisma's Invoice model
+      hr/                   EmployeesController/Service
+      procurement/           PurchaseOrdersController/Service
+      projects/              ProjectsController/Service (mounted at top-level /projects)
+      dashboard/             Aggregates every module's DashboardWidgetProvider into one summary
   web/                      Next.js app
     src/
       lib/auth/             AuthProvider/useAuth() (access token in memory, refresh via cookie)
       lib/realtime/         useDomainEvents() - Socket.io client hook
-      lib/inventory/, lib/sales/   Feature API clients
-      app/inventory/, app/sales/  Feature pages
+      lib/notifications/    Notifications API client + useNotificationPush() (separate raw-socket channel)
+      lib/dashboard/        Dashboard API client + widget-kind -> renderer-component registry
+      lib/hooks/            useTableFilters() - shared "read filters from the URL" hook
+      lib/inventory/, lib/sales/, lib/finance/, lib/hr/,
+      lib/procurement/, lib/projects/, lib/workflow/   Feature API clients (one per module)
+      components/app-shell.tsx   Persistent, permission-aware top nav (mounted from Providers)
+      app/inventory/, app/sales/, app/finance/, app/hr/,
+      app/procurement/, app/projects/, app/workflows/   Feature pages
 packages/
   contracts/                Shared DTOs (zod), permission key registry, event name registry,
                              workflow action config types - THE cross-app source of truth
@@ -114,14 +129,39 @@ docker-compose.yml          Postgres + Redis for local dev
   in-process delivery without it — you'll just lose cross-instance fan-out,
   not real-time within one running API process). Postgres is required.
 
-> **Note on this repo's history:** every phase of this project so far was built
-> on a machine with no Node.js/pnpm/Docker installed at all — every agent that
-> wrote code here did so by hand, cross-checking imports/exports by reading
-> files rather than compiling. That means **the very first `pnpm install` +
-> `pnpm typecheck` on a real machine is this project's first-ever compile.**
-> Expect to fix a handful of minor issues (a version mismatch, a Prisma type
-> nuance) — the architecture and wiring have been carefully reviewed, but
-> nothing here has been machine-verified until you do it.
+> **Note on this repo's history:** every phase through the initial dashboard
+> slice was built on a machine with no Node.js/pnpm/Docker installed at all —
+> every agent that wrote code did so by hand, cross-checking imports/exports
+> by reading files rather than compiling. A later session ran the first-ever
+> `pnpm install` + `pnpm typecheck` on a real machine (Windows) and found
+> exactly two real bugs from that hand-written era (both fixed — see git log
+> around "First machine-verified compile"), confirming the architecture and
+> wiring held up. Since then, every phase has been built with a working
+> toolchain and machine-verified (typecheck + lint + a real Playwright browser
+> session) before being committed — if you're picking this up with a working
+> toolchain, keep doing that; don't fall back to hand-review-only discipline.
+>
+> **Windows-specific gotchas hit along the way**, worth knowing before you
+> assume something's broken:
+> - `corepack enable` can fail with `EPERM` if you don't have admin rights to
+>   write shims into `C:\Program Files\nodejs`. Fix: `npm install -g pnpm@9.5.0`
+>   instead of corepack.
+> - `apps/api`'s `nest start --watch` (`deleteOutDir: true` in its
+>   `nest-cli.json`) can silently emit zero files and then crash with
+>   `Cannot find module '...\dist\main'` if `dist/` was deleted (e.g. after
+>   force-killing a stuck dev-server process tree) while a stale
+>   `tsconfig.tsbuildinfo` / `tsconfig.build.tsbuildinfo` survives — TypeScript's
+>   incremental build trusts that cache's timestamps over checking whether
+>   `dist/` still exists. Fix: delete both `.tsbuildinfo` files (gitignored,
+>   always safe to delete) and rebuild.
+> - Background dev-server processes started by an agent harness may not be
+>   fully killed by the harness's own "stop task" action on Windows — the
+>   `pnpm -> turbo -> nest`/`tsc --watch` child-process tree can survive and
+>   hold file locks (blocked a Postgres advisory lock during `prisma migrate
+>   dev` once, blocked Prisma client regeneration another time). If something
+>   inexplicably hangs or fails with a lock/permission error, check
+>   `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` in PowerShell and
+>   force-kill the real PIDs rather than assuming the code is broken.
 
 ## Setup
 
@@ -270,7 +310,11 @@ its `triggerEvent` (one of `EVENTS`) matches, if its `conditionsJson`
 ordered `WorkflowAction`s (`notify` | `updateField` | `createRecord` |
 `callWebhook` | `assignTask`) via `ActionHandlerRegistry`
 (`apps/api/src/core/workflow/`). Every firing is logged to `WorkflowRun` for
-debugging. Manage via the REST API (`/workflows`) — there's no admin UI yet.
+debugging. Managed via the REST API (`/workflows`) and a form-based admin UI
+(`apps/web/src/app/workflows/` — conditions stay a raw json-logic-js JSON
+textarea rather than a graphical rule builder, deliberately, per the original
+plan's "form-based, not visual-canvas" framing); the run history is visible
+on each workflow's detail page.
 
 ### Inventory ↔ Sales: the reference integration pattern
 
@@ -309,13 +353,21 @@ Follow this pattern for any new money field.
 - Feature modules get their own typed fetch client (`lib/inventory/api.ts`,
   `lib/sales/api-client.ts`) rather than a shared generic one — each mirrors
   its backend module's DTOs.
-- There is **no global app shell/sidebar yet** — each feature module (
-  `app/inventory/layout.tsx`, `app/sales/layout.tsx`) renders its own small
-  section nav. Building a real one is dashboard-phase scope.
-- There is **no shared `useTableFilters` hook yet** — pages that read
-  filters from the URL do so directly via `useSearchParams` (see
-  `app/inventory/stock/page.tsx`). Extract a shared hook once enough pages
-  need it (flagged as dashboard-phase scope in the plan).
+- `AppShell` (`components/app-shell.tsx`, mounted once from `Providers`) is
+  the persistent, permission-aware top nav — every destination is filtered by
+  `hasPermission(requiredPermission)` before it's shown. Module sections with
+  real multi-page sub-navigation (Inventory's Products/Warehouses/Stock,
+  Sales's Orders/Customers) still render their own local sub-nav underneath
+  it; single-resource modules (Finance, HR, Procurement, Projects, Workflows)
+  don't — a local nav with exactly one link to itself added nothing.
+- `useTableFilters` (`lib/hooks/use-table-filters.ts`) is the shared "read
+  filters from the URL query string" hook — see `app/inventory/stock/page.tsx`
+  for the reference usage. Pass an explicit type argument
+  (`useTableFilters<{ x: string; y: boolean }>({...})`) rather than letting it
+  infer from the defaults object — TS infers literal types (e.g. `false`
+  instead of `boolean`) from object-literal arguments against a
+  union-constrained generic, which then rejects normal toggle code like
+  `setFilter('y', !y)`.
 - Live updates: `useDomainEvents(callback, filterEventName?)` — see
   `app/inventory/stock/page.tsx` and `app/sales/orders/[id]/page.tsx` for the
   two established patterns (silent background refetch vs. targeted
@@ -324,32 +376,50 @@ Follow this pattern for any new money field.
 ## How this was built (context for continuing the work)
 
 This project was built by an orchestrating Claude Code session that
-decomposed the work into phases and delegated most of the implementation to
-parallel Opus sub-agents working in isolated git worktrees, each briefed with
-a narrow scope and an explicit list of files it must NOT touch (to keep
-parallel agents collision-free). The orchestrator reviewed every agent's diff
-by hand before merging — reading the actual code, not trusting the agent's
-self-report — because the dev machine had no Node.js/npm/Docker installed, so
-**nothing could be compiled or run**; correctness was established by careful
-reading and cross-referencing, not execution. If you're continuing this
-project as an AI agent: keep that discipline. If you're continuing it as a
-human with a working toolchain: run `pnpm typecheck` immediately and treat
-any error as expected-and-fixable, not a sign something is deeply wrong.
+decomposed the work into phases. Early phases (through the initial dashboard
+slice) delegated implementation to parallel Opus sub-agents working in
+isolated git worktrees, each briefed with a narrow scope and an explicit list
+of files it must NOT touch (to keep parallel agents collision-free); the
+orchestrator reviewed every diff by hand before merging, because the dev
+machine had no Node.js/npm/Docker installed and **nothing could be compiled
+or run** — correctness was established by careful reading and
+cross-referencing, not execution.
+
+A later session, on a machine with a real toolchain, ran the first-ever
+compile, fixed what it found, and continued the same phased approach but with
+machine verification at every step: `pnpm typecheck` + `pnpm lint` after every
+change, and a real headless-Chromium (Playwright) browser session to actually
+exercise each new feature end-to-end before committing — not just "it
+compiles," but "I logged in and clicked through it." That session also reused
+the parallel-worktree-agent pattern for the four structurally-identical
+Finance/HR/Procurement/Projects stubs (see git log around "Add Finance, HR,
+Procurement, Projects module stubs" for how collisions were avoided: the
+shared-file touchpoints — Prisma back-relations, `app.module.ts` registration
+— were resolved by the orchestrator up front, not discovered via merge
+conflicts after the fact).
+
+**If you're continuing this project as an AI agent:** if you have a working
+toolchain, use it — `pnpm typecheck`/`pnpm lint` after every change, and
+actually run the app (`pnpm dev` + a browser, real or automated) before
+declaring a feature done. Compiling is necessary but not sufficient; several
+real bugs in this codebase's history were only caught by actually clicking
+through the feature (e.g. a live-push notification silently going nowhere
+because of a wrong user ID — passed typecheck fine, only visible by watching
+it not arrive in a browser). If you have no toolchain, fall back to the
+original hand-review discipline: narrow, explicit-file-list agent briefs,
+and careful reading over trusting a self-report.
 
 ## Handoff — read this first if you're the next session
 
-The previous session was stopped by an explicit time-box (the user asked to
-work until a specific time, then write handoff notes), **not** because a
-phase was finished and it was a natural stopping point. Concretely, at
-cutoff:
+Every phase from the previous "Suggested next phases" list is now done —
+Notifications frontend, the dashboard widget-registry framework, all four
+remaining business-module stubs, the workflow admin UI, and a real app shell
+are all built, integrated, and verified in a real browser session. This was a
+natural stopping point (list exhausted), not a time-box cutoff:
 
-- Everything described in the status table above as "Done" is genuinely
-  merged to `main` and was carefully hand-reviewed (see "How this was built"
-  below) — safe to build on.
-- The dashboard row ("Partial") was the very last thing touched. It's a
-  complete, working, small vertical slice (real numbers, real drill-down
-  links, live-updating) — not a half-finished framework. Don't treat it as
-  broken; treat it as intentionally minimal.
+- Everything in the status table above marked "Done" is merged to `main`,
+  typechecks/lints clean across all workspace packages, and was exercised in
+  a real browser (not just compiled) before being committed.
 - **Nothing was left mid-edit or uncommitted.** Run `git log --oneline -20`
   and `git status` to confirm before doing anything else — if `git status`
   isn't clean, something unexpected happened after this README was written
@@ -357,45 +427,47 @@ cutoff:
 - No agent worktrees should be left lying around (`.claude/worktrees/` is
   gitignored and should be empty or absent — if you find stale ones from an
   interrupted run, check `git worktree list` and clean up with
-  `git worktree remove` before starting new work, per the pattern used
-  throughout this project).
+  `git worktree remove` before starting new work; note some worktree
+  directories can hit Windows' path-length limit on plain deletion — a
+  `robocopy <empty-dir> <target> /MIR` "mirror an empty dir over it" trick
+  clears those where `rm -rf` can't).
+- Dev-only artifacts you'll see in a fresh `pnpm dev` + login: the seeded
+  admin's test data from verification sessions (a few products/warehouses/
+  purchase orders/projects/employees named things like "Test Widget" or
+  "Trigger Widget") may still be in your local Postgres volume depending on
+  whether you're reusing the same `docker compose` volume — harmless, delete
+  via the UI or `db:reset` if it bothers you.
 
 ### Suggested next phases, roughly in priority order
 
-1. **Notifications frontend** — the backend is fully built and unused. Add a
-   bell icon + dropdown (or a `/notifications` page) that calls
-   `GET /notifications` and `POST /notifications/:id/read`. This is the
-   highest-value gap: the workflow engine's `notify` action already creates
-   these rows, so there's real data waiting with no UI to see it.
-   **Live-push gotcha to fix first:** `NotificationService.send()`
-   broadcasts via `emitToUser(userId, 'notification.created', dto)` — a RAW
-   socket.io event name carrying a bare `NotificationDto` — which is a
-   *different* channel from `RealtimeGateway`'s `'domain-event'` broadcast
-   that `useDomainEvents()` listens on (see `realtime.gateway.ts`'s
-   `REALTIME_EVENT` constant vs. `notifications.service.ts`'s
-   `NOTIFICATION_CREATED_EVENT`). `useDomainEvents()` as written will
-   **never** see a notification push. Either add a small second hook that
-   listens for a named raw socket event, or (probably cleaner) change
-   notification creation to also flow through `EventBusService.emit()` so
-   there's one real-time channel, not two. Decide and document whichever way
-   you go — right now it's an inconsistency, not a deliberate design.
-2. **Generalize the dashboard into the widget-registry framework** described
-   in the original project plan: each module contributes its own
-   `widgets.ts` (auto-discovered, not one shared array everyone edits), a
-   proper `requiredPermission`-aware widget component registry, and the
-   shared `useTableFilters` hook (extract it now — both `app/inventory/stock`
-   and the dashboard KPI links independently reimplement "read a filter from
-   the URL," which was flagged as a TODO in both places).
-3. **Finance, HR, Procurement, Projects stubs** — permission keys already
-   exist in `packages/contracts/src/permissions.ts`; each needs a Nest
-   module, 1-2 entities, basic CRUD, a nav entry, and one dashboard widget
-   wired to a real query — follow the Inventory/Sales modules as the
-   reference shape, and the "additive-only edits to shared files" discipline
-   described above.
-4. **Workflow admin UI** — a form-based (not visual-canvas) builder for
-   `WorkflowDefinition`/`WorkflowAction` against the existing `/workflows`
-   API.
-5. **A real app shell/nav** — right now each feature module renders its own
-   small section nav (`app/inventory/layout.tsx`, `app/sales/layout.tsx`) and
-   the dashboard links to them ad hoc. A persistent sidebar/top-nav that
-   reflects the user's permissions belongs here.
+1. **Automated tests** — there are currently **zero** automated tests
+   anywhere in this repo (`find . -iname "*.spec.ts" -o -iname "*.test.ts"`
+   returns nothing). Every phase so far has been verified by hand (typecheck
+   + lint + a manual/Playwright browser pass) rather than a regression suite.
+   With 8 modules now, that's the biggest structural risk to future changes —
+   a good starting scope: NestJS's built-in Jest setup for the trickiest
+   business logic (`StockService`'s reserve/commit/release, the workflow
+   engine's condition evaluation, `SalesOrdersService.confirm()`'s
+   compensating-release rollback), then expand from there.
+2. **Reporting** — the one area from the original plan with genuinely nothing
+   built yet, not even reserved permission keys in
+   `packages/contracts/src/permissions.ts`. Needs scoping first: what reports,
+   against which modules' data, exported how (the plan's original framing was
+   "executive dashboards with drill-down," which the dashboard widget-registry
+   already partially delivers — worth deciding whether "Reporting" is a
+   distinct module or whether it's actually asking for more dashboard widgets
+   plus an export/print view).
+3. **Procurement line items** — `PurchaseOrder` is currently a single
+   `totalAmount` with no `PurchaseOrderLine`/`Product` tie, unlike `SalesOrder`
+   (real `SalesOrderLine[]`). A real receiving flow (PO line → Inventory
+   `StockService.adjust()`) needs that structure first — flagged in
+   `procurement.prisma`'s docblock.
+4. **HR ↔ User linking** — `Employee` is currently standalone with no relation
+   to `User`, so there's no self-service ("my profile," "my time off") story
+   yet — flagged in `hr.prisma`'s docblock as the intended growth path.
+5. **Workflow conditions as a real (optional) visual builder** — currently a
+   raw json-logic-js JSON textarea (deliberately, per the original plan's
+   "form-based, not visual-canvas" framing). If usage shows admins actually
+   struggling with raw JSON, a constrained visual builder for the common
+   comparison operators would be the next step — but don't build this
+   speculatively; the textarea is a legitimate, shipped v1.
