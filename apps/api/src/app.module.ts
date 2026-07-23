@@ -15,6 +15,7 @@ import { NotificationsModule } from './core/notifications/notifications.module';
 import { WorkflowModule } from './core/workflow/workflow.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { SalesModule } from './sales/sales.module';
     WorkflowModule,
     InventoryModule,
     SalesModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

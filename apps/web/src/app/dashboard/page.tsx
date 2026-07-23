@@ -1,14 +1,55 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from '@erp/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, KpiCard, buttonVariants } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
+import { useDomainEvents } from '@/lib/realtime/use-domain-events';
+import { API_BASE_URL } from '@/lib/auth/api-client';
+
+interface DashboardSummary {
+  lowStockCount: number;
+  totalInventoryValue: string;
+  openOrdersCount: number;
+  salesThisMonth: string;
+}
+
+function formatMoney(value: string): string {
+  const n = Number(value);
+  return Number.isFinite(n)
+    ? n.toLocaleString(undefined, { style: 'currency', currency: 'USD' })
+    : value;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, permissions, isLoading, logout } = useAuth();
+  const { user, permissions, isLoading, logout, getAccessToken } = useAuth();
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+
+  const loadSummary = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/dashboard/summary`, {
+        credentials: 'include',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setSummary((await res.json()) as DashboardSummary);
+    } catch {
+      // Best-effort: the account/permissions cards below still render fine
+      // without KPIs, so a failed summary fetch isn't a page-level error.
+    }
+  }, [getAccessToken]);
+
+  useEffect(() => {
+    void loadSummary();
+  }, [loadSummary]);
+
+  // Live refresh: any inventory or sales-order change updates the KPIs
+  // without a manual reload — same real-time channel as the Inventory/Sales
+  // pages.
+  useDomainEvents(useCallback(() => void loadSummary(), [loadSummary]));
 
   // Redirect to /login once bootstrap has finished and there is no session.
   useEffect(() => {
@@ -31,7 +72,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
+    <main className="mx-auto max-w-4xl space-y-6 px-6 py-10">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
@@ -41,11 +82,47 @@ export default function DashboardPage() {
           <Link href="/inventory/products" className={buttonVariants({ variant: 'secondary' })}>
             Inventory
           </Link>
+          <Link href="/sales/orders" className={buttonVariants({ variant: 'secondary' })}>
+            Sales
+          </Link>
           <Button variant="outline" onClick={() => void logout()}>
             Log out
           </Button>
         </div>
       </div>
+
+      {summary ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href="/inventory/stock?lowStock=true">
+            <KpiCard
+              title="Low stock items"
+              value={summary.lowStockCount}
+              hint="click to view"
+            />
+          </Link>
+          <Link href="/inventory/stock">
+            <KpiCard
+              title="Inventory value"
+              value={formatMoney(summary.totalInventoryValue)}
+              hint="on-hand x cost, click to view"
+            />
+          </Link>
+          <Link href="/sales/orders?status=confirmed">
+            <KpiCard
+              title="Orders pending fulfillment"
+              value={summary.openOrdersCount}
+              hint="click to view"
+            />
+          </Link>
+          <Link href="/sales/orders">
+            <KpiCard
+              title="Sales this month"
+              value={formatMoney(summary.salesThisMonth)}
+              hint="click to view"
+            />
+          </Link>
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
