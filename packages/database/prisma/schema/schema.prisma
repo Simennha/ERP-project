@@ -45,6 +45,10 @@ model Company {
   notifications Notification[]
   workflowDefinitions WorkflowDefinition[]
   eventLogs     EventLog[]
+  warehouses     Warehouse[]
+  products       Product[]
+  stockItems     StockItem[]
+  stockMovements StockMovement[]
 }
 
 model Department {
@@ -92,6 +96,11 @@ model User {
   rolesUpdated               Role[]               @relation("RoleUpdatedBy")
   workflowDefinitionsCreated WorkflowDefinition[]  @relation("WorkflowDefinitionCreatedBy")
   workflowDefinitionsUpdated WorkflowDefinition[]  @relation("WorkflowDefinitionUpdatedBy")
+  warehousesCreated          Warehouse[]           @relation("WarehouseCreatedBy")
+  warehousesUpdated          Warehouse[]           @relation("WarehouseUpdatedBy")
+  productsCreated            Product[]             @relation("ProductCreatedBy")
+  productsUpdated            Product[]             @relation("ProductUpdatedBy")
+  stockMovementsCreated      StockMovement[]       @relation("StockMovementCreatedBy")
 
   @@unique([companyId, email])
   @@index([companyId])

@@ -1,0 +1,113 @@
+// Inventory module (Phase 3 deep-build). StockItem/StockMovement are mutated
+// ONLY through apps/api/src/inventory/stock.service.ts (StockService) — never
+// updated directly by other modules — so every stock change goes through one
+// place that enforces the reserve/commit/release/adjust invariants and emits
+// `inventory.stock.updated` (see @erp/contracts events.ts).
+
+model Warehouse {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String
+  address     String?
+  isActive    Boolean  @default(true)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy      User?           @relation("WarehouseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User?           @relation("WarehouseUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  stockItems     StockItem[]
+  stockMovements StockMovement[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  companyId   String
+  sku         String
+  name        String
+  description String?
+  // Unit of measure, e.g. "each", "kg", "box" — free text for v1.
+  uom         String   @default("each")
+  costPrice   Decimal  @db.Decimal(12, 2)
+  salePrice   Decimal  @db.Decimal(12, 2)
+  category    String?
+  isActive    Boolean  @default(true)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy      User?           @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User?           @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  stockItems     StockItem[]
+  stockMovements StockMovement[]
+
+  @@unique([companyId, sku])
+  @@index([companyId])
+  @@index([category])
+}
+
+// Current stock level of one product at one warehouse. `quantityOnHand` is the
+// physical count; `quantityReserved` is stock already committed to open sales
+// orders. Available-to-sell = quantityOnHand - quantityReserved (computed by
+// StockService, not stored). Both are only ever changed by StockService,
+// inside the same transaction as the StockMovement row that explains the change.
+model StockItem {
+  id               String   @id @default(cuid())
+  companyId        String
+  productId        String
+  warehouseId      String
+  quantityOnHand   Int      @default(0)
+  quantityReserved Int      @default(0)
+  reorderPoint     Int      @default(0)
+  reorderQty       Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+  @@index([companyId])
+  @@index([warehouseId])
+}
+
+// Append-only ledger of every stock change. One row per StockService call,
+// always written in the same transaction as the StockItem update it explains.
+model StockMovement {
+  id            String   @id @default(cuid())
+  companyId     String
+  productId     String
+  warehouseId   String
+  // 'in' | 'out' | 'reserve' | 'release' | 'adjust' — see @erp/contracts
+  // InventoryStockUpdatedPayload['reason'] for the matching event vocabulary.
+  type          String
+  // Signed change: reserve/out/adjust-down are negative on the relevant
+  // counter, in/release/adjust-up are positive. See StockService for exactly
+  // which counter (onHand vs reserved) a given type affects.
+  quantity      Int
+  reason        String?
+  // Optional link back to the record that caused this movement, e.g.
+  // referenceType: "SalesOrder", referenceId: <id>.
+  referenceType String?
+  referenceId   String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation("StockMovementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([productId, warehouseId])
+  @@index([referenceType, referenceId])
+  @@index([createdAt])
+}

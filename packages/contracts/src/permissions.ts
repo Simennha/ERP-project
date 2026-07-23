@@ -29,6 +29,7 @@ export const PERMISSIONS = {
   INVENTORY_PRODUCT_UPDATE: 'inventory:product.update',
   INVENTORY_PRODUCT_DELETE: 'inventory:product.delete',
   INVENTORY_STOCK_ADJUST: 'inventory:stock.adjust',
+  INVENTORY_WAREHOUSE_MANAGE: 'inventory:warehouse.manage',
 
   // --- Sales (placeholder resource: order) ----------------------------------
   SALES_ORDER_READ: 'sales:order.read',
@@ -112,6 +113,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: PERMISSIONS.INVENTORY_PRODUCT_UPDATE, module: 'inventory', description: 'Edit products' },
   { key: PERMISSIONS.INVENTORY_PRODUCT_DELETE, module: 'inventory', description: 'Delete products' },
   { key: PERMISSIONS.INVENTORY_STOCK_ADJUST, module: 'inventory', description: 'Adjust stock levels' },
+  { key: PERMISSIONS.INVENTORY_WAREHOUSE_MANAGE, module: 'inventory', description: 'Create and edit warehouses' },
 
   // Sales
   { key: PERMISSIONS.SALES_ORDER_READ, module: 'sales', description: 'View sales orders' },
