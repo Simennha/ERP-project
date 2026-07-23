@@ -146,7 +146,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full border px-3 py-1 text-sm transition-colors',
+        'border px-3 py-1 text-sm transition-colors',
         active
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',

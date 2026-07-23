@@ -115,7 +115,7 @@ export function NotificationBell() {
         type="button"
         aria-label="Notifications"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-accent"
+        className="relative flex h-10 w-10 items-center justify-center rounded-none border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-accent"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { buttonVariants } from '@erp/ui';
 
 export default function HomePage() {
   return (
@@ -11,16 +12,10 @@ export default function HomePage() {
         </p>
       </div>
       <div className="flex gap-3">
-        <Link
-          href="/login"
-          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
+        <Link href="/login" className={buttonVariants({ size: 'lg' })}>
           Sign in
         </Link>
-        <Link
-          href="/dashboard"
-          className="inline-flex h-10 items-center justify-center rounded-md border border-input px-6 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
+        <Link href="/dashboard" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
           Dashboard
         </Link>
       </div>

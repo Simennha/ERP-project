@@ -66,7 +66,7 @@ export function AppShell() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  'shrink-0 px-3 py-1.5 text-sm font-medium transition-colors',
                   active
                     ? 'bg-secondary text-secondary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
