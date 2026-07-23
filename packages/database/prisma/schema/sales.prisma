@@ -94,12 +94,14 @@ model SalesOrderLine {
   @@index([productId])
 }
 
-// Invoice: model + relations ONLY — there is intentionally no InvoiceService or
-// InvoiceController in this module. Nothing populates this table yet; it is the
-// seed for BOTH a later Finance module AND the order-confirm integration step,
-// which will create rows here (invoiceNumber is expected to be generated the
-// same way as orderNumber, e.g. `INV-{YYYYMMDD}-{6 base36 chars}`, by whichever
-// service ends up owning invoice creation).
+// Invoice: this WAS "model + relations only, no service" (see git history) —
+// the Finance module (apps/api/src/finance/) now owns InvoiceService/
+// InvoiceController against this exact table, keeping the 1:1 tie to
+// SalesOrder rather than introducing a second, competing invoice concept.
+// invoiceNumber is generated the same way as SalesOrder.orderNumber:
+// `INV-{YYYYMMDD}-{6 base36 chars}`. createdById/updatedById were added
+// (originally absent) to match every other model's author-tracking convention
+// now that a real service creates/updates these rows.
 model Invoice {
   id            String   @id @default(cuid())
   companyId     String
@@ -108,11 +110,15 @@ model Invoice {
   // Allowed values: 'draft' | 'sent' | 'paid'. Plain String column.
   status        String   @default("draft")
   totalAmount   Decimal  @db.Decimal(12, 2)
+  createdById   String?
+  updatedById   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  createdBy  User?      @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User?      @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId])

@@ -52,6 +52,9 @@ model Company {
   customers      Customer[]
   salesOrders    SalesOrder[]
   invoices       Invoice[]
+  employees      Employee[]
+  purchaseOrders PurchaseOrder[]
+  projects       Project[]
 }
 
 model Department {
