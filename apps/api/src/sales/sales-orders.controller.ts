@@ -29,14 +29,19 @@ import {
 } from './sales-orders.schemas';
 
 /**
- * Sales orders CRUD + the read-only order-builder availability helper. Per-route
- * `@RequirePermission(...)` (verbs need different permissions).
+ * Sales orders CRUD + status-transition actions + the read-only order-builder
+ * availability helper. Per-route `@RequirePermission(...)` (verbs need
+ * different permissions).
  *
- * NO confirm/fulfill/cancel routes exist here by design: status transitions and
- * the stock-reservation integration are a deliberately separate follow-up step.
+ * confirm/fulfill/cancel are the integration point with Inventory: they call
+ * through to SalesOrdersService, which in turn calls StockService's
+ * reserve/commitReservation/release — see sales-orders.service.ts for the
+ * full write-up of that boundary.
  *
- * Route order note: the static `availability` and `orders` paths are declared
- * before the parameterised `orders/:id` so there is no ambiguity.
+ * Route order note: `orders/:id/confirm` (3 segments) never collides with
+ * `orders/:id` (2 segments) regardless of declaration order; the earlier
+ * `availability` vs `orders` note (both top-level literals) is a separate,
+ * already-correct case.
  */
 @Controller('sales')
 export class SalesOrdersController {
@@ -103,5 +108,26 @@ export class SalesOrdersController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.orders.remove(user.companyId, id);
+  }
+
+  /** Reserve stock for every line and transition draft -> confirmed. */
+  @Post('orders/:id/confirm')
+  @RequirePermission(PERMISSIONS.SALES_ORDER_UPDATE)
+  confirm(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.orders.confirm(user.companyId, user.userId, id);
+  }
+
+  /** Commit each line's reservation to an actual deduction; confirmed -> fulfilled. */
+  @Post('orders/:id/fulfill')
+  @RequirePermission(PERMISSIONS.SALES_ORDER_UPDATE)
+  fulfill(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.orders.fulfill(user.companyId, user.userId, id);
+  }
+
+  /** Release any reserved stock (if confirmed) and cancel; draft|confirmed -> cancelled. */
+  @Post('orders/:id/cancel')
+  @RequirePermission(PERMISSIONS.SALES_ORDER_UPDATE)
+  cancel(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.orders.cancel(user.companyId, user.userId, id);
   }
 }
