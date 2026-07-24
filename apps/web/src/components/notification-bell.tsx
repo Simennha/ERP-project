@@ -188,9 +188,14 @@ export function NotificationBell() {
                         <span className={cn('font-medium', !notification.isRead && 'font-semibold')}>
                           {notification.title}
                         </span>
-                        {!notification.isRead && (
-                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                        )}
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          {notification.link && (
+                            <span aria-hidden="true" className="text-muted-foreground" title="Opens a link">
+                              →
+                            </span>
+                          )}
+                          {!notification.isRead && <span className="h-2 w-2 rounded-full bg-primary" />}
+                        </span>
                       </div>
                       {notification.body && (
                         <span className="text-muted-foreground">{notification.body}</span>

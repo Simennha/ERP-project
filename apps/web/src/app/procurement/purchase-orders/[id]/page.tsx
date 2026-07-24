@@ -32,6 +32,7 @@ import {
   type PurchaseOrderLineDto,
 } from '@/lib/procurement/api';
 import { PurchaseOrderForm, type PurchaseOrderFormValues } from '../purchase-order-form';
+import { exportPurchaseOrderPdf } from '@/lib/pdf/purchase-order-pdf';
 
 const STATUS_TONE: Record<string, StatusTone> = {
   draft: 'neutral',
@@ -307,6 +308,9 @@ function PurchaseOrderDetailContent() {
           <p className="text-muted-foreground">Vendor: {purchaseOrder.vendorName}</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => exportPurchaseOrderPdf(purchaseOrder)}>
+            Export PDF
+          </Button>
           <Link href="/procurement/purchase-orders" className={buttonVariants({ variant: 'outline' })}>
             Back to purchase orders
           </Link>

@@ -44,6 +44,7 @@ const assignTaskConfigSchema = z.object({
   assigneeUserId: z.string().min(1),
   title: z.string().min(1),
   dueAt: z.string().optional(),
+  link: z.string().optional(),
 });
 
 const orderField = z.number().int().min(0).optional();

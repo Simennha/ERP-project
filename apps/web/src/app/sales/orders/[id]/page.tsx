@@ -26,6 +26,7 @@ import {
   type SalesOrderDetail,
   type SalesOrderLine,
 } from '@/lib/sales/api-client';
+import { exportSalesOrderPdf } from '@/lib/pdf/sales-order-pdf';
 
 const STATUS_TONE: Record<string, StatusTone> = {
   draft: 'neutral',
@@ -142,9 +143,14 @@ function OrderDetail({ id }: { id: string }) {
             Ordered {new Date(order.orderDate).toLocaleString()}
           </p>
         </div>
-        <Link href="/sales/orders" className="text-sm underline underline-offset-4">
-          Back to orders
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => exportSalesOrderPdf(order)}>
+            Export PDF
+          </Button>
+          <Link href="/sales/orders" className="text-sm underline underline-offset-4">
+            Back to orders
+          </Link>
+        </div>
       </div>
 
       <Card>

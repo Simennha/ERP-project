@@ -1,14 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PERMISSIONS, getReportTypeDefinition } from '@erp/contracts';
-import { Button, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, DataTable, buttonVariants, type DataTableColumn } from '@erp/ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequirePermissionPage } from '@/lib/auth/require-permission-page';
 import { deleteReport, getReport, runReport, type ReportDto, type ReportResult } from '@/lib/reporting/api';
 import { downloadCsv, toCsv } from '@/lib/reporting/csv';
+import { detectChartData } from '@/lib/reporting/chart-data';
+import { ReportChart } from './report-chart';
+import { exportReportPdf } from '@/lib/pdf/report-pdf';
 
 function ReportDetailContent() {
   const router = useRouter();
@@ -23,6 +26,9 @@ function ReportDetailContent() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const chartCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const chartData = useMemo(() => (result ? detectChartData(result) : null), [result]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,6 +77,16 @@ function ReportDetailContent() {
   function handleExport() {
     if (!result || !report) return;
     downloadCsv(`${report.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`, toCsv(result));
+  }
+
+  function handleExportPdf() {
+    if (!result || !report) return;
+    const canvas = chartCanvasRef.current;
+    const chart =
+      chartData && canvas && canvas.width > 0 && canvas.height > 0
+        ? { dataUrl: canvas.toDataURL('image/png'), aspectRatio: canvas.width / canvas.height }
+        : undefined;
+    exportReportPdf(report, result, chart);
   }
 
   if (loading) {
@@ -122,6 +138,9 @@ function ReportDetailContent() {
           <Button variant="secondary" onClick={handleExport} disabled={!result || result.rows.length === 0}>
             Export CSV
           </Button>
+          <Button variant="secondary" onClick={handleExportPdf} disabled={!result || result.rows.length === 0}>
+            Export PDF
+          </Button>
           {canDelete ? (
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Deleting…' : 'Delete'}
@@ -134,6 +153,17 @@ function ReportDetailContent() {
         <p className="text-sm font-medium text-destructive" role="alert">
           {error}
         </p>
+      ) : null}
+
+      {chartData ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Chart</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReportChart data={chartData} canvasRef={chartCanvasRef} />
+          </CardContent>
+        </Card>
       ) : null}
 
       <DataTable

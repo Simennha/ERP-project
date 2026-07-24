@@ -29,6 +29,7 @@ export interface NotifyActionConfig {
   title: string;
   /** May reference event payload fields with `{{fieldName}}` interpolation. */
   body?: string;
+  /** May reference event payload fields with `{{fieldName}}` interpolation. */
   link?: string;
 }
 
@@ -60,6 +61,8 @@ export interface AssignTaskActionConfig {
   assigneeUserId: string;
   title: string;
   dueAt?: string;
+  /** May reference event payload fields with `{{fieldName}}` interpolation. */
+  link?: string;
 }
 
 export type WorkflowActionConfig =

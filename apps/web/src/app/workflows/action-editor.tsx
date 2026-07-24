@@ -216,8 +216,12 @@ function NotifyFields({
         </Field>
       </div>
       <div className="col-span-2">
-        <Field label="Link (optional)">
-          <Input value={asString(config.link)} onChange={(e) => setConfig({ link: e.target.value || undefined })} />
+        <Field label="Link (optional, supports {{fieldName}} — e.g. /sales/orders/{{orderId}})">
+          <Input
+            value={asString(config.link)}
+            placeholder="/sales/orders/{{orderId}}"
+            onChange={(e) => setConfig({ link: e.target.value || undefined })}
+          />
         </Field>
       </div>
     </div>
@@ -335,6 +339,15 @@ function AssignTaskFields({
           onChange={(e) => setConfig({ dueAt: e.target.value || undefined })}
         />
       </Field>
+      <div className="col-span-3">
+        <Field label="Link (optional, supports {{fieldName}} — e.g. /sales/orders/{{orderId}})">
+          <Input
+            value={asString(config.link)}
+            placeholder="/sales/orders/{{orderId}}"
+            onChange={(e) => setConfig({ link: e.target.value || undefined })}
+          />
+        </Field>
+      </div>
     </div>
   );
 }

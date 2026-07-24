@@ -46,6 +46,8 @@ export class NotifyActionHandler implements ActionHandler {
     const title = interpolate(cfg.title, payload);
     const body =
       cfg.body !== undefined ? interpolate(cfg.body, payload) : undefined;
+    const link =
+      cfg.link !== undefined ? interpolate(cfg.link, payload) : undefined;
 
     for (const userId of recipientIds) {
       await this.notifications.send({
@@ -54,7 +56,7 @@ export class NotifyActionHandler implements ActionHandler {
         type: 'workflow',
         title,
         body,
-        link: cfg.link,
+        link,
         sourceEvent: context.event.name,
       });
     }

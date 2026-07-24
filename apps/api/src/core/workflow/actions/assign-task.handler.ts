@@ -31,6 +31,7 @@ export class AssignTaskActionHandler implements ActionHandler {
       type: 'task',
       title: interpolate(cfg.title, payload),
       body: cfg.dueAt ? `Due: ${cfg.dueAt}` : undefined,
+      link: cfg.link !== undefined ? interpolate(cfg.link, payload) : undefined,
       sourceEvent: context.event.name,
     });
   }
